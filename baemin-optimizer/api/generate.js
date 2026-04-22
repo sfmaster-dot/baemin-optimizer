@@ -6,24 +6,24 @@ export default async function handler(req, res) {
   const { type, storeInfo } = req.body;
 
   const prompts = {
-    intro: `당신은 배달앱 음식점 마케팅 전문가입니다.
-아래 가게 정보를 바탕으로 배달의민족 앱 "가게소개" 문구를 작성해주세요.
+    intro: `당신은 배달의민족 입점 컨설턴트입니다. 아래 정보를 바탕으로 배민 "가게소개" 문구를 작성하세요.
 
 가게 정보:
-- 업종: ${storeInfo.category}
-- 대표 메뉴: ${storeInfo.mainMenu}
-- 특징/차별점: ${storeInfo.feature}
-- 운영 방식: ${storeInfo.style || '일반'}
+- 업종/대표메뉴: ${storeInfo.category} / ${storeInfo.mainMenu}
+- 차별점: ${storeInfo.feature}
+- 운영 특이사항: ${storeInfo.style || '없음'}
 
-작성 규칙:
-1. 100~200자 이내
-2. 첫 줄에 핵심 차별점 (업종, 특징) 먼저
-3. 인사말(안녕하세요 등)로 시작하지 말 것
-4. 기본 제공 구성, 1인 주문 가능 여부 포함
-5. 검색 노출에 유리한 키워드 자연스럽게 포함
-6. 배달 음식 느낌 살릴 것
+작성 규칙 (반드시 지킬 것):
+1. 총 3줄 구성, 줄바꿈으로 구분
+2. 1줄: [메뉴명 또는 업종] + [핵심 차별점 1가지] — 15자 이내로 압축. 예) "직화 불향 제육볶음 전문.", "수제 돈까스 전문점."
+3. 2줄: 재료·조리방식 신뢰감 1문장. 예) "매일 아침 당일 손질 재료만 사용합니다."
+4. 3줄: 기본 제공 구성 + 주문 편의 1문장. 예) "공기밥·김치 기본 제공. 1인분도 주문 가능."
+5. 인사말·감사합니다·환영합니다 절대 금지
+6. 광고 카피·느낌표 과다 사용 금지
+7. 전체 150자 이내
+8. 검색에 유리한 메뉴명 키워드 반드시 포함
 
-문구만 출력하세요. 설명이나 부가 내용 없이.`,
+문구 3줄만 출력. 설명·번호·따옴표 없이.`,
 
     order: `당신은 배달앱 음식점 운영 전문가입니다.
 아래 가게 정보를 바탕으로 배달의민족 "주문안내" 문구를 작성해주세요.
@@ -76,6 +76,9 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
+    if (data.error) {
+      return res.status(500).json({ error: data.error.message || JSON.stringify(data.error) });
+    }
     const text = data.content?.[0]?.text || '';
     res.status(200).json({ result: text });
   } catch (err) {
