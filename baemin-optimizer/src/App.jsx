@@ -19,7 +19,7 @@ export default function App() {
   return (
     <div style={S.root}>
       <div style={S.header}>
-        <div style={S.logo}>배</div>
+        <img src='/baemin-logo.png' alt='배민' style={S.logo} />
         <div style={S.htext}>
           <div style={S.htitle}>배민 가게정보 최적화 체크리스트</div>
           <div style={S.hsub}>배달의민족 셀프서비스 · 가게정보 설정</div>
@@ -52,7 +52,7 @@ export default function App() {
 const S = {
   root: { fontFamily:"'Noto Sans KR',sans-serif", background:'#0f1110', color:'#e8ede8', minHeight:'100vh', WebkitFontSmoothing:'antialiased' },
   header: { background:'#181c1a', borderBottom:'1px solid #2a3030', padding:'18px 24px', display:'flex', alignItems:'center', gap:'14px', position:'sticky', top:0, zIndex:50 },
-  logo: { width:'36px', height:'36px', background:'#3dba6f', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'17px', fontWeight:900, color:'#fff', flexShrink:0 },
+  logo: { width:'36px', height:'36px', flexShrink:0, borderRadius:'8px', objectFit:'cover' },
   htext: { flex:1 },
   htitle: { fontSize:'16px', fontWeight:700 },
   hsub: { fontSize:'11px', color:'#607570', marginTop:'2px' },
