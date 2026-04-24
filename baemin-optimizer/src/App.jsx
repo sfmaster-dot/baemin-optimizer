@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CHECKLIST, SECTIONS } from './data/checklist';
 import CheckItem from './components/CheckItem';
 import AiModal from './components/AiModal';
+import LoginScreen from './components/LoginScreen';
+import { onAuthChange, logout, loadUserData, saveChecklist } from './lib/firebase';
 
 const AI_TOOLS = [
   { type: 'intro',    emoji: '🏪', name: '가게소개 생성',   desc: '200~400자 · 스토리형' },
@@ -29,10 +31,51 @@ const GRADE_COLOR = {
 };
 
 export default function App() {
+  const [user, setUser]         = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [dataLoaded, setDataLoaded]   = useState(false);
+  const [profileMenu, setProfileMenu] = useState(false);
+
   const [checked, setChecked]   = useState({});
   const [aiModal, setAiModal]   = useState(null);
   const [fabOpen, setFabOpen]   = useState(false);
-  const [activeTab, setActiveTab] = useState(1); // 현재 선택된 섹션
+  const [activeTab, setActiveTab] = useState(1);
+
+  const saveTimerRef = useRef(null);
+
+  // ── 인증 상태 감지 ──
+  useEffect(() => {
+    const unsub = onAuthChange(async (u) => {
+      setUser(u);
+      setAuthLoading(false);
+      if (u) {
+        // 로그인 시 Firestore에서 체크리스트 불러오기
+        const data = await loadUserData(u.uid);
+        if (data?.checklist) {
+          setChecked(data.checklist);
+        }
+        setDataLoaded(true);
+      } else {
+        setChecked({});
+        setDataLoaded(false);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  // ── 체크리스트 변경 시 디바운스 저장 ──
+  useEffect(() => {
+    if (!user || !dataLoaded) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveChecklist(user.uid, checked, {
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+      });
+    }, 800);
+    return () => clearTimeout(saveTimerRef.current);
+  }, [checked, user, dataLoaded]);
 
   const total = CHECKLIST.length;
   const done  = Object.keys(checked).length;
@@ -50,6 +93,21 @@ export default function App() {
 
   const activeItems = CHECKLIST.filter(i => i.section === activeTab);
 
+  // ── 로딩 ──
+  if (authLoading) {
+    return (
+      <div style={S.loader}>
+        <div style={S.spinner} />
+      </div>
+    );
+  }
+
+  // ── 로그인 안 된 경우 ──
+  if (!user) {
+    return <LoginScreen />;
+  }
+
+  // ── 로그인 된 경우 ──
   return (
     <div style={S.root}>
       <header style={S.header}>
@@ -61,10 +119,37 @@ export default function App() {
             <span style={S.badge}>✓ 공식 가이드 2026.04 반영</span>
           </div>
         </div>
-        <div style={S.hprog}>
-          <div style={S.plabel}>완료 항목 · <span style={{...S.grade, ...GRADE_COLOR[grade.cls]}}>{grade.label}</span></div>
-          <div style={S.pbarWrap}><div style={{ ...S.pbarFill, width: pct + '%' }} /></div>
-          <div style={S.pcount}><span style={{color:'#3dba6f',fontWeight:700}}>{done}</span><span style={{color:'#607570',fontWeight:500}}> / {total}</span></div>
+        <div style={S.hright}>
+          <div style={S.hprog}>
+            <div style={S.plabel}>완료 · <span style={{...S.grade, ...GRADE_COLOR[grade.cls]}}>{grade.label}</span></div>
+            <div style={S.pbarWrap}><div style={{ ...S.pbarFill, width: pct + '%' }} /></div>
+            <div style={S.pcount}><span style={{color:'#3dba6f',fontWeight:700}}>{done}</span><span style={{color:'#607570',fontWeight:500}}> / {total}</span></div>
+          </div>
+
+          {/* 프로필 */}
+          <div style={S.profileWrap}>
+            <button style={S.profileBtn} onClick={() => setProfileMenu(o => !o)} title={user.displayName}>
+              {user.photoURL
+                ? <img src={user.photoURL} alt='' style={S.profileImg} referrerPolicy='no-referrer' />
+                : <div style={S.profileFallback}>{(user.displayName || user.email)[0]}</div>
+              }
+            </button>
+            {profileMenu && (
+              <>
+                <div style={S.profileBackdrop} onClick={() => setProfileMenu(false)} />
+                <div style={S.profileMenu}>
+                  <div style={S.profileInfo}>
+                    <div style={S.profileName}>{user.displayName || '사용자'}</div>
+                    <div style={S.profileEmail}>{user.email}</div>
+                  </div>
+                  <div style={S.profileDiv} />
+                  <button style={S.profileItem} onClick={() => { logout(); setProfileMenu(false); }}>
+                    <span>↗</span> 로그아웃
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -91,40 +176,31 @@ export default function App() {
           </div>
         </div>
 
-        {/* 탭 UI */}
+        {/* 탭 */}
         <div style={S.tabsWrap}>
           <div style={S.tabs}>
             {SECTIONS.map(sec => {
               const items = CHECKLIST.filter(i => i.section === sec.id);
               const secDone = items.filter(i => checked[i.id]).length;
               const isActive = activeTab === sec.id;
-              const isDone = secDone === items.length;
+              const isDone = secDone === items.length && items.length > 0;
               return (
-                <button
-                  key={sec.id}
-                  className='tabBtn'
-                  style={{
-                    ...S.tabBtn,
-                    ...(isActive ? S.tabBtnActive : {}),
-                  }}
-                  onClick={() => setActiveTab(sec.id)}
-                >
+                <button key={sec.id} className='tabBtn'
+                  style={{ ...S.tabBtn, ...(isActive ? S.tabBtnActive : {}) }}
+                  onClick={() => setActiveTab(sec.id)}>
                   <span style={S.tabEmoji}>{sec.emoji}</span>
-                  <span style={S.tabLabel}>{sec.short}</span>
+                  <span>{sec.short}</span>
                   <span style={{
                     ...S.tabCount,
                     color: isActive ? '#3dba6f' : isDone ? '#3dba6f' : '#607570',
                     background: isActive ? 'rgba(61,186,111,.15)' : 'transparent',
-                  }}>
-                    {secDone}/{items.length}
-                  </span>
+                  }}>{secDone}/{items.length}</span>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* 현재 섹션 체크리스트 */}
         <div style={{minHeight: '300px'}}>
           {activeItems.map(item => (
             <CheckItem key={item.id} item={item} checked={!!checked[item.id]} onToggle={toggle} />
@@ -139,22 +215,18 @@ export default function App() {
         )}
       </main>
 
-      {/* 플로팅 AI 버튼 */}
+      {/* 플로팅 FAB */}
       <div style={S.fab}>
         <div style={{...S.fabMenu, display: fabOpen ? 'flex' : 'none'}}>
           {AI_TOOLS.map(t => (
             <button key={t.type} className='fabItem' onClick={() => openAi(t.type)}>
-              <span className='fabItemIcon'>{t.emoji}</span>
-              {t.name}
+              <span className='fabItemIcon'>{t.emoji}</span>{t.name}
             </button>
           ))}
         </div>
-        <button
-          className='fabMain'
+        <button className='fabMain'
           style={{...S.fabMain, ...(fabOpen ? S.fabMainOpen : {})}}
-          onClick={() => setFabOpen(o => !o)}
-          title='AI 문구 생성 도구'
-        >
+          onClick={() => setFabOpen(o => !o)} title='AI 문구 생성 도구'>
           {fabOpen ? '✕' : '✨'}
         </button>
       </div>
@@ -162,10 +234,9 @@ export default function App() {
       {aiModal && modalItem && <AiModal item={modalItem} onClose={() => setAiModal(null)} />}
 
       <style>{`
-        @keyframes fabFadeIn {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fabFadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
         .aiCard {
           display: flex; align-items: center; gap: 12px;
           padding: 14px 16px; background: #181c1a;
@@ -181,14 +252,10 @@ export default function App() {
         .aiCardEmoji {
           flex-shrink: 0; width: 38px; height: 38px;
           border-radius: 10px; background: rgba(61,186,111,.12);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 18px;
+          display: flex; align-items: center; justify-content: center; font-size: 18px;
         }
 
-        .tabBtn:hover {
-          background: #1c2021 !important;
-          color: #e8ede8 !important;
-        }
+        .tabBtn:hover { background: #1c2021 !important; color: #e8ede8 !important; }
 
         .fabMain {
           width: 60px; height: 60px; border-radius: 50%;
@@ -196,14 +263,10 @@ export default function App() {
           color: white; font-size: 26px;
           box-shadow: 0 6px 20px rgba(61,186,111,.35), 0 2px 8px rgba(0,0,0,.25);
           border: 2px solid rgba(255,255,255,.15);
-          cursor: pointer;
-          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
           display: flex; align-items: center; justify-content: center;
         }
-        .fabMain:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 10px 28px rgba(61,186,111,.5), 0 4px 12px rgba(0,0,0,.3);
-        }
+        .fabMain:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(61,186,111,.5), 0 4px 12px rgba(0,0,0,.3); }
 
         .fabItem {
           display: flex; align-items: center; gap: 10px;
@@ -222,8 +285,7 @@ export default function App() {
         .fabItemIcon {
           width: 28px; height: 28px; border-radius: 50%;
           background: rgba(61,186,111,.12);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 14px;
+          display: flex; align-items: center; justify-content: center; font-size: 14px;
         }
 
         @media (max-width: 680px) {
@@ -237,22 +299,38 @@ export default function App() {
 
 const S = {
   root: { fontFamily:"'Noto Sans KR',sans-serif", background:'#0f1110', color:'#e8ede8', minHeight:'100vh', WebkitFontSmoothing:'antialiased' },
-  header: { background:'rgba(15,17,16,0.92)', backdropFilter:'blur(8px)', borderBottom:'1px solid #2a3030', padding:'20px 32px', display:'grid', gridTemplateColumns:'auto 1fr auto', gap:'20px', alignItems:'center', position:'sticky', top:0, zIndex:50 },
-  logo: { width:'56px', height:'56px', borderRadius:'14px', background:'white', padding:'2px', boxShadow:'0 2px 8px rgba(0,0,0,.3)', overflow:'hidden', flexShrink:0 },
-  logoImg: { width:'100%', height:'100%', objectFit:'contain', borderRadius:'12px', display:'block' },
+
+  loader: { background:'#0f1110', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center' },
+  spinner: { width:'36px', height:'36px', border:'3px solid rgba(61,186,111,.2)', borderTopColor:'#3dba6f', borderRadius:'50%', animation:'spin 0.8s linear infinite' },
+
+  header: { background:'rgba(15,17,16,0.92)', backdropFilter:'blur(8px)', borderBottom:'1px solid #2a3030', padding:'16px 32px', display:'grid', gridTemplateColumns:'auto 1fr auto', gap:'16px', alignItems:'center', position:'sticky', top:0, zIndex:50 },
+  logo: { width:'50px', height:'50px', borderRadius:'12px', background:'white', padding:'2px', boxShadow:'0 2px 8px rgba(0,0,0,.3)', overflow:'hidden', flexShrink:0 },
+  logoImg: { width:'100%', height:'100%', objectFit:'contain', borderRadius:'10px', display:'block' },
   htext: { minWidth:0 },
-  htitle: { fontSize:'20px', fontWeight:700, letterSpacing:'-0.3px', margin:0, marginBottom:'3px' },
-  hsub: { fontSize:'12.5px', color:'#9aada6', display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap' },
-  badge: { display:'inline-flex', alignItems:'center', padding:'2px 8px', background:'rgba(61,186,111,.12)', color:'#3dba6f', border:'1px solid rgba(61,186,111,.3)', borderRadius:'4px', fontSize:'11px', fontWeight:600 },
-  hprog: { textAlign:'right', minWidth:'150px' },
-  plabel: { fontSize:'11px', color:'#607570', marginBottom:'6px', letterSpacing:'.3px' },
+  htitle: { fontSize:'18px', fontWeight:700, letterSpacing:'-0.3px', margin:0, marginBottom:'3px' },
+  hsub: { fontSize:'12px', color:'#9aada6', display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap' },
+  badge: { display:'inline-flex', alignItems:'center', padding:'2px 8px', background:'rgba(61,186,111,.12)', color:'#3dba6f', border:'1px solid rgba(61,186,111,.3)', borderRadius:'4px', fontSize:'10.5px', fontWeight:600 },
+  hright: { display:'flex', alignItems:'center', gap:'16px' },
+  hprog: { textAlign:'right', minWidth:'130px' },
+  plabel: { fontSize:'11px', color:'#607570', marginBottom:'5px' },
   grade: { fontWeight:600 },
-  pbarWrap: { width:'150px', height:'6px', background:'#232829', borderRadius:'999px', overflow:'hidden', marginBottom:'4px', marginLeft:'auto' },
+  pbarWrap: { width:'130px', height:'5px', background:'#232829', borderRadius:'999px', overflow:'hidden', marginBottom:'3px', marginLeft:'auto' },
   pbarFill: { height:'100%', background:'linear-gradient(90deg,#3dba6f,#00a869)', borderRadius:'999px', transition:'width .4s cubic-bezier(.4,0,.2,1)' },
-  pcount: { fontSize:'14px', fontWeight:600 },
+  pcount: { fontSize:'13px', fontWeight:600 },
+
+  profileWrap: { position:'relative' },
+  profileBtn: { width:'38px', height:'38px', borderRadius:'50%', border:'2px solid #2a3030', overflow:'hidden', cursor:'pointer', background:'#181c1a', padding:0, flexShrink:0 },
+  profileImg: { width:'100%', height:'100%', objectFit:'cover', display:'block' },
+  profileFallback: { width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', color:'#3dba6f', fontWeight:700, fontSize:'14px' },
+  profileBackdrop: { position:'fixed', inset:0, zIndex:99 },
+  profileMenu: { position:'absolute', top:'calc(100% + 8px)', right:0, background:'#181c1a', border:'1px solid #2a3030', borderRadius:'10px', minWidth:'220px', boxShadow:'0 12px 32px rgba(0,0,0,.5)', zIndex:100, overflow:'hidden' },
+  profileInfo: { padding:'14px 16px' },
+  profileName: { fontSize:'13px', fontWeight:600, color:'#e8ede8', marginBottom:'2px' },
+  profileEmail: { fontSize:'11.5px', color:'#607570' },
+  profileDiv: { height:'1px', background:'#2a3030' },
+  profileItem: { width:'100%', background:'none', border:'none', padding:'11px 16px', fontSize:'13px', color:'#e8ede8', cursor:'pointer', display:'flex', alignItems:'center', gap:'8px', textAlign:'left', fontFamily:'inherit' },
 
   main: { maxWidth:'920px', margin:'0 auto', padding:'32px 24px 100px' },
-
   aiPanel: { background:'#16191a', border:'1px solid #2a3030', borderRadius:'14px', padding:'20px 22px', marginBottom:'24px' },
   aiPanelHead: { display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'16px' },
   aiPanelTitle: { fontSize:'16px', fontWeight:700, color:'#e8ede8', display:'flex', alignItems:'center', gap:'8px', marginBottom:'4px' },
@@ -263,13 +341,11 @@ const S = {
   aiName: { fontSize:'13.5px', fontWeight:600, color:'#e8ede8', lineHeight:1.3 },
   aiDesc: { fontSize:'11.5px', color:'#607570', lineHeight:1.3 },
 
-  // 탭
-  tabsWrap: { position:'sticky', top:'97px', zIndex:30, background:'rgba(15,17,16,0.95)', backdropFilter:'blur(8px)', padding:'12px 0', marginBottom:'16px', borderBottom:'1px solid #2a3030', marginLeft:'-24px', marginRight:'-24px', paddingLeft:'24px', paddingRight:'24px' },
+  tabsWrap: { position:'sticky', top:'87px', zIndex:30, background:'rgba(15,17,16,0.95)', backdropFilter:'blur(8px)', padding:'12px 0', marginBottom:'16px', borderBottom:'1px solid #2a3030', marginLeft:'-24px', marginRight:'-24px', paddingLeft:'24px', paddingRight:'24px' },
   tabs: { display:'flex', gap:'6px', overflowX:'auto', scrollbarWidth:'none' },
   tabBtn: { display:'flex', alignItems:'center', gap:'6px', padding:'10px 14px', background:'transparent', border:'1px solid transparent', borderRadius:'10px', color:'#607570', fontSize:'13px', fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', transition:'all .2s', fontFamily:'inherit' },
   tabBtnActive: { background:'#1c2021', border:'1px solid rgba(61,186,111,.3)', color:'#e8ede8' },
   tabEmoji: { fontSize:'14px' },
-  tabLabel: { },
   tabCount: { fontSize:'11px', fontWeight:700, padding:'2px 7px', borderRadius:'10px', transition:'all .2s' },
 
   banner: { background:'linear-gradient(135deg,#1e4a32,#0d3020)', border:'1px solid #3dba6f', borderRadius:'14px', padding:'24px', textAlign:'center', marginTop:'24px' },
