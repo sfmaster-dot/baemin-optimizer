@@ -45,7 +45,6 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [profileMenu, setProfileMenu] = useState(false);
 
-  // 다점포 훅
   const {
     stores,
     activeStoreId,
@@ -57,7 +56,6 @@ export default function App() {
     patchLocalStore,
   } = useStores(user);
 
-  // 현재 매장의 체크리스트 상태
   const [checked, setChecked] = useState({});
   const [storeDataLoaded, setStoreDataLoaded] = useState(false);
 
@@ -65,14 +63,12 @@ export default function App() {
   const [fabOpen, setFabOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(1);
 
-  // 매장 관리 모달
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
   const saveTimerRef = useRef(null);
   const prevStoreIdRef = useRef(null);
 
-  // ── 인증 상태 감지 ──
   useEffect(() => {
     const unsub = onAuthChange((u) => {
       setUser(u);
@@ -85,7 +81,6 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // ── activeStoreId 변경 시 해당 매장 데이터 로드 ──
   useEffect(() => {
     if (!user || !activeStoreId) {
       setChecked({});
@@ -94,7 +89,6 @@ export default function App() {
       return;
     }
 
-    // 같은 매장이면 재로드하지 않음
     if (prevStoreIdRef.current === activeStoreId) return;
 
     let cancelled = false;
@@ -111,7 +105,6 @@ export default function App() {
     return () => { cancelled = true; };
   }, [user, activeStoreId]);
 
-  // ── 체크리스트 변경 시 디바운스 저장 ──
   useEffect(() => {
     if (!user || !activeStoreId || !storeDataLoaded) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -137,7 +130,6 @@ export default function App() {
 
   const activeItems = CHECKLIST.filter(i => i.section === activeTab);
 
-  // ── 매장 추가 핸들러 ──
   async function handleAddStore(input) {
     const storeId = await addStore(input);
     if (storeId) {
@@ -146,7 +138,6 @@ export default function App() {
     return storeId;
   }
 
-  // ── 매장 수정 핸들러 ──
   async function handleEditStore(storeId, patch) {
     const ok = await updateStore(user.uid, storeId, patch);
     if (ok) {
@@ -155,18 +146,15 @@ export default function App() {
     return ok;
   }
 
-  // ── 매장 삭제 핸들러 ──
   async function handleDeleteStore(storeId) {
     const ok = await deleteStoreDoc(user.uid, storeId);
     if (ok) {
-      // 훅 리프레시 → 자동으로 첫 번째 매장으로 active 전환
       await refreshStores();
-      prevStoreIdRef.current = null;  // 다음 activeStoreId 변경 시 데이터 재로드 강제
+      prevStoreIdRef.current = null;
     }
     return ok;
   }
 
-  // ── 로딩 ──
   if (authLoading) {
     return (
       <div style={S.loader}>
@@ -175,12 +163,10 @@ export default function App() {
     );
   }
 
-  // ── 로그인 안 된 경우 ──
   if (!user) {
     return <LoginScreen />;
   }
 
-  // ── 매장 로딩 중 ──
   if (storesLoading) {
     return (
       <div style={S.loader}>
@@ -189,7 +175,7 @@ export default function App() {
     );
   }
 
-  // ── 매장이 하나도 없는 경우 — 강제 추가 모달 ──
+  // 매장이 하나도 없는 경우 — 강제 추가 모달
   if (stores.length === 0) {
     return (
       <>
@@ -203,12 +189,12 @@ export default function App() {
         <StoreAddModal
           forceFirst
           onSubmit={handleAddStore}
+          existingStores={stores}
         />
       </>
     );
   }
 
-  // ── 로그인 + 매장 있는 일반 상태 ──
   return (
     <div style={S.root}>
       <header style={S.header}>
@@ -345,6 +331,7 @@ export default function App() {
         <StoreAddModal
           onSubmit={handleAddStore}
           onClose={() => setShowAddModal(false)}
+          existingStores={stores}
         />
       )}
 
@@ -355,6 +342,7 @@ export default function App() {
           onDelete={handleDeleteStore}
           onClose={() => setShowEditModal(false)}
           canDelete={stores.length > 1}
+          existingStores={stores}
         />
       )}
 

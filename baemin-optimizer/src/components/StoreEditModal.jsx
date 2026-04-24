@@ -1,29 +1,58 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   BAEMIN_CATEGORIES,
   MAX_CATEGORIES_PER_STORE,
   toggleCategoryId,
 } from '../data/categories';
+import {
+  MAX_STORES_PER_BUSINESS,
+  getGroupKey,
+  countStoresInSameGroup,
+} from '../lib/stores';
 
 // 매장 수정/삭제 모달
 // props:
-//   - store: { id, name, categoryIds: string[], businessId }
+//   - store: { id, name, categoryIds, businessId, businessGroupName }
 //   - onSubmit(storeId, patch) => Promise<boolean>
 //   - onDelete(storeId) => Promise<boolean>
 //   - onClose(): void
 //   - canDelete: boolean
+//   - existingStores?: []  ← 4개 초과 경고 계산용
 
-export default function StoreEditModal({ store, onSubmit, onDelete, onClose, canDelete }) {
+export default function StoreEditModal({
+  store,
+  onSubmit,
+  onDelete,
+  onClose,
+  canDelete,
+  existingStores = [],
+}) {
   const initialCategoryIds = Array.isArray(store?.categoryIds) ? store.categoryIds : [];
+  const initialBusinessId = store?.businessId || '';
+  const initialGroupName = store?.businessGroupName || '';
 
   const [name, setName] = useState(store?.name || '');
   const [categoryIds, setCategoryIds] = useState(initialCategoryIds);
-  const [businessId, setBusinessId] = useState(store?.businessId || '');
+  const [businessId, setBusinessId] = useState(initialBusinessId);
+  const [businessGroupName, setBusinessGroupName] = useState(initialGroupName);
   const [submitting, setSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState('');
 
-  // 배열 비교 (순서 포함)
+  // 현재 입력값 기준 가상 매장 (경고 계산용)
+  const previewStore = { businessId, businessGroupName };
+  const sameGroupKey = getGroupKey(previewStore);
+
+  // 같은 그룹에 이미 몇 개? (자기 자신 제외)
+  const existingCount = useMemo(() => {
+    if (sameGroupKey === null) return 0;
+    return countStoresInSameGroup(existingStores, previewStore, store?.id);
+  }, [existingStores, sameGroupKey, businessId, businessGroupName, store?.id]);
+
+  // 경고는 "4개 이미 있는데 이 매장이 그 그룹에 추가로 들어가려 할 때" 표시
+  // 수정이므로 이 매장까지 포함하면 5개 이상이 되는 상황
+  const showOverLimit = existingCount >= MAX_STORES_PER_BUSINESS;
+
   const categoriesChanged =
     categoryIds.length !== initialCategoryIds.length ||
     categoryIds.some((id, i) => id !== initialCategoryIds[i]);
@@ -31,7 +60,8 @@ export default function StoreEditModal({ store, onSubmit, onDelete, onClose, can
   const hasChanges =
     name.trim() !== (store?.name || '') ||
     categoriesChanged ||
-    businessId.trim() !== (store?.businessId || '');
+    businessId.trim() !== initialBusinessId ||
+    businessGroupName.trim() !== initialGroupName;
 
   const canSubmit =
     name.trim() &&
@@ -52,6 +82,7 @@ export default function StoreEditModal({ store, onSubmit, onDelete, onClose, can
         name: name.trim(),
         categoryIds,
         businessId: businessId.trim(),
+        businessGroupName: businessGroupName.trim(),
       });
       if (ok) {
         onClose();
@@ -134,6 +165,19 @@ export default function StoreEditModal({ store, onSubmit, onDelete, onClose, can
           <button style={S.closeBtn} onClick={onClose} aria-label='닫기'>✕</button>
         </div>
 
+        {/* 경고 배너 (수정 시 다른 그룹으로 옮기려는데 그쪽에 이미 4개 있을 때) */}
+        {showOverLimit && (
+          <div style={S.warnBanner}>
+            <span style={S.warnIcon}>⚠️</span>
+            <div style={S.warnText}>
+              이 사업자에 이미 {existingCount}개 매장이 있습니다.{' '}
+              <span style={S.warnSub}>
+                배민은 사업자 1개당 최대 {MAX_STORES_PER_BUSINESS}개 매장까지 권장합니다.
+              </span>
+            </div>
+          </div>
+        )}
+
         <div style={S.body}>
           <div style={S.field}>
             <label style={S.label}>
@@ -181,18 +225,39 @@ export default function StoreEditModal({ store, onSubmit, onDelete, onClose, can
             </div>
           </div>
 
-          <div style={S.field}>
-            <label style={S.label}>
-              사업자번호 <span style={S.opt}>선택</span>
-            </label>
-            <input
-              style={S.input}
-              type='text'
-              value={businessId}
-              onChange={(e) => setBusinessId(e.target.value)}
-              placeholder='예: 123-45-67890'
-              maxLength={20}
-            />
+          {/* 사업자 그룹 */}
+          <div style={S.groupBox}>
+            <div style={S.groupTitle}>
+              <span>📋 사업자 정보</span>
+              <span style={S.opt}>모두 선택</span>
+            </div>
+            <div style={S.groupHint}>
+              같은 사업자의 매장끼리 묶여서 관리됩니다.
+            </div>
+
+            <div style={S.fieldRow}>
+              <label style={S.labelSmall}>사업자명</label>
+              <input
+                style={S.input}
+                type='text'
+                value={businessGroupName}
+                onChange={(e) => setBusinessGroupName(e.target.value)}
+                placeholder='예: (주)단꿈 · 영일이F&B'
+                maxLength={40}
+              />
+            </div>
+
+            <div style={S.fieldRow}>
+              <label style={S.labelSmall}>사업자번호</label>
+              <input
+                style={S.input}
+                type='text'
+                value={businessId}
+                onChange={(e) => setBusinessId(e.target.value)}
+                placeholder='예: 123-45-67890'
+                maxLength={20}
+              />
+            </div>
           </div>
 
           {error && <div style={S.error}>{error}</div>}
@@ -262,11 +327,27 @@ const S = {
     background: '#232829', color: '#9aada6', cursor: 'pointer',
     fontSize: '14px', flexShrink: 0,
   },
+
+  warnBanner: {
+    display: 'flex', alignItems: 'flex-start', gap: '10px',
+    padding: '12px 20px',
+    background: 'rgba(245,160,65,.08)',
+    borderBottom: '1px solid rgba(245,160,65,.3)',
+  },
+  warnIcon: { fontSize: '16px', flexShrink: 0, marginTop: '1px' },
+  warnText: { fontSize: '12.5px', color: '#F5A041', fontWeight: 600, lineHeight: 1.5 },
+  warnSub: { color: '#d49140', fontWeight: 400 },
+
   body: { padding: '20px 24px', overflowY: 'auto', flex: 1 },
   field: { marginBottom: '20px' },
+  fieldRow: { marginBottom: '10px' },
   label: {
     display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
     fontSize: '13px', fontWeight: 600, color: '#e8ede8', marginBottom: '8px',
+  },
+  labelSmall: {
+    display: 'block',
+    fontSize: '11.5px', fontWeight: 500, color: '#9aada6', marginBottom: '5px',
   },
   req: {
     fontSize: '10.5px', fontWeight: 700, color: '#ef5b5b',
@@ -294,6 +375,21 @@ const S = {
     color: '#e8ede8', fontSize: '14px', fontFamily: 'inherit',
     boxSizing: 'border-box', outline: 'none',
   },
+
+  groupBox: {
+    padding: '14px 16px', marginBottom: '20px',
+    background: 'rgba(255,255,255,.02)',
+    border: '1px solid #2a3030', borderRadius: '12px',
+  },
+  groupTitle: {
+    display: 'flex', alignItems: 'center', gap: '8px',
+    fontSize: '13px', fontWeight: 600, color: '#e8ede8', marginBottom: '4px',
+  },
+  groupHint: {
+    fontSize: '11.5px', color: '#607570', lineHeight: 1.5,
+    marginBottom: '14px',
+  },
+
   catGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',

@@ -1,62 +1,60 @@
-// 배민 공식 카테고리 15종 (2026 기준)
-// 매장 추가/수정 시 최대 4개 선택 가능 (배민 실제 정책)
+// 배민 공식 카테고리 (2026.04 기준, 총 15개)
+// 매장당 최대 4개까지 선택 가능 (배민 실제 정책)
 
 export const BAEMIN_CATEGORIES = [
-  { id: 'korean',      name: '한식',             emoji: '🍚' },
-  { id: 'chinese',     name: '중식',             emoji: '🥟' },
-  { id: 'japanese',    name: '일식',             emoji: '🍣' },
-  { id: 'western',     name: '양식',             emoji: '🍝' },
-  { id: 'snack',       name: '분식',             emoji: '🍜' },
-  { id: 'chicken',     name: '치킨',             emoji: '🍗' },
-  { id: 'pizza',       name: '피자',             emoji: '🍕' },
-  { id: 'jokbal',      name: '족발·보쌈',         emoji: '🥩' },
-  { id: 'night',       name: '야식',             emoji: '🌙' },
-  { id: 'jjim',        name: '찜·탕',            emoji: '🍲' },
-  { id: 'lunchbox',    name: '도시락',           emoji: '🍱' },
-  { id: 'fastfood',    name: '패스트푸드',       emoji: '🍔' },
-  { id: 'cafe',        name: '카페·디저트',       emoji: '☕' },
-  { id: 'asian',       name: '아시안·세계음식',   emoji: '🌏' },
-  { id: 'franchise',   name: '프랜차이즈',       emoji: '🏪' },
+  { id: 'meat',        emoji: '🥩', name: '고기·구이' },
+  { id: 'baekban',     emoji: '🍚', name: '백반·죽·국수' },
+  { id: 'jjim',        emoji: '🍲', name: '찜·탕·찌개' },
+  { id: 'snack',       emoji: '🌭', name: '분식' },
+  { id: 'cafe',        emoji: '☕', name: '카페·디저트' },
+  { id: 'japanese',    emoji: '🍣', name: '돈까스·회·일식' },
+  { id: 'western',     emoji: '🍝', name: '양식' },
+  { id: 'asian',       emoji: '🌏', name: '아시안' },
+  { id: 'jokbal',      emoji: '🥓', name: '족발·보쌈' },
+  { id: 'pizza',       emoji: '🍕', name: '피자' },
+  { id: 'chicken',     emoji: '🍗', name: '치킨' },
+  { id: 'chinese',     emoji: '🥟', name: '중식' },
+  { id: 'night',       emoji: '🌙', name: '야식' },
+  { id: 'lunchbox',    emoji: '🍱', name: '도시락' },
+  { id: 'fastfood',    emoji: '🍔', name: '패스트푸드' },
 ];
 
-// 배민 카테고리 신청 최대 개수 (메인매장/샵인샵 각각 독립)
+// 카테고리 최대 선택 개수 (배민 실제 정책)
 export const MAX_CATEGORIES_PER_STORE = 4;
 
-// 샵인샵 소프트 제한 (경고만, 추가는 허용)
-export const SHOP_IN_SHOP_SOFT_LIMIT = 3;
+// 유효한 카테고리 ID 집합 (마이그레이션/검증용)
+export const VALID_CATEGORY_IDS = new Set(BAEMIN_CATEGORIES.map(c => c.id));
 
-// 단일 ID 조회
+// ID로 카테고리 찾기
 export function getCategoryById(id) {
   return BAEMIN_CATEGORIES.find(c => c.id === id) || null;
 }
 
-export function getCategoryName(id) {
-  return getCategoryById(id)?.name || '';
-}
-
-// 여러 ID를 이름 배열로 변환 (순서 유지, 없는 ID는 스킵)
-export function getCategoryNames(ids) {
+// ID 배열을 카테고리 객체 배열로 변환 (유효한 것만)
+// 유효하지 않은 ID는 자동으로 걸러짐 → 구 카테고리 자동 무시
+export function getCategoriesByIds(ids) {
   if (!Array.isArray(ids)) return [];
   return ids
-    .map(id => getCategoryName(id))
-    .filter(name => name);
+    .map(id => getCategoryById(id))
+    .filter(Boolean);
 }
 
-// 여러 ID를 "한식·중식·야식" 같은 구분자 문자열로 (UI 표시용)
-export function formatCategoryList(ids, separator = '·') {
-  return getCategoryNames(ids).join(separator);
+// 주어진 ID들 중 유효한 것만 남기기
+// → 구 카테고리 ID(korean, franchise 등)는 자동 제거
+export function sanitizeCategoryIds(ids) {
+  if (!Array.isArray(ids)) return [];
+  return ids.filter(id => VALID_CATEGORY_IDS.has(id));
 }
 
-// 배열 토글 (선택/해제). 최대 개수 제한 적용.
-// - id가 이미 있으면 제거
-// - 없으면 추가 (단, 이미 max개면 무시)
-export function toggleCategoryId(currentIds, id, max = MAX_CATEGORIES_PER_STORE) {
-  const list = Array.isArray(currentIds) ? currentIds : [];
-  if (list.includes(id)) {
-    return list.filter(x => x !== id);
+// 카테고리 ID 토글 (선택/해제)
+// 최대 개수 초과 시 무시
+export function toggleCategoryId(currentIds, newId) {
+  if (!Array.isArray(currentIds)) return [newId];
+  if (currentIds.includes(newId)) {
+    return currentIds.filter(id => id !== newId);
   }
-  if (list.length >= max) {
-    return list;  // 최대 초과 시 무시
+  if (currentIds.length >= MAX_CATEGORIES_PER_STORE) {
+    return currentIds;  // 최대 개수 도달, 추가 불가
   }
-  return [...list, id];
+  return [...currentIds, newId];
 }

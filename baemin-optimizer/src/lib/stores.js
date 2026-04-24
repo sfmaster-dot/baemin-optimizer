@@ -1,7 +1,7 @@
 // 다점포 Firestore 헬퍼
 // 경로 구조:
 //   baemin/{uid}                      ← 사용자 프로필 (activeStoreId 포함)
-//   baemin/{uid}/stores/{storeId}     ← 매장별 데이터 (체크리스트, 샵인샵, AI캐시)
+//   baemin/{uid}/stores/{storeId}     ← 매장별 데이터
 
 import {
   collection,
@@ -18,7 +18,15 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 
-// ── 프로필 (activeStoreId 관리) ──
+// 사업자당 매장 권장 최대 개수 (배민 정책)
+export const MAX_STORES_PER_BUSINESS = 4;
+
+// 미분류 그룹 식별자 (상수화)
+// 배민 현실 반영: 사업자명을 입력하지 않은 매장들도 "하나의 사업자" 그룹으로 취급
+// (대부분 사장님은 사업자 1개로 운영하므로)
+const UNCLASSIFIED_KEY = '__unclassified__';
+
+// ── 프로필 ──
 
 export async function loadProfile(uid) {
   try {
@@ -45,7 +53,7 @@ export async function setActiveStoreId(uid, storeId) {
   }
 }
 
-// ── 매장 목록 조회 ──
+// ── 매장 목록 ──
 
 export async function listStores(uid) {
   try {
@@ -59,8 +67,6 @@ export async function listStores(uid) {
   }
 }
 
-// ── 매장 개별 조회 ──
-
 export async function loadStore(uid, storeId) {
   try {
     const ref = doc(db, 'baemin', uid, 'stores', storeId);
@@ -72,10 +78,7 @@ export async function loadStore(uid, storeId) {
   }
 }
 
-// ── 매장 생성 ──
-// input: { name, categoryIds: string[], businessId?, shopInShops? }
-// - categoryIds: 최대 4개 카테고리 ID 배열 (배민 정책)
-// - 순서는 사용자가 선택한 순서 그대로 저장
+// ── 매장 생성/수정/삭제 ──
 
 export async function createStore(uid, input) {
   try {
@@ -84,6 +87,7 @@ export async function createStore(uid, input) {
       name: input.name?.trim() || '이름 없는 매장',
       categoryIds: Array.isArray(input.categoryIds) ? input.categoryIds.slice(0, 4) : [],
       businessId: input.businessId?.trim() || '',
+      businessGroupName: input.businessGroupName?.trim() || '',
       shopInShops: Array.isArray(input.shopInShops) ? input.shopInShops : [],
       checklist: {},
       aiCache: {},
@@ -96,9 +100,6 @@ export async function createStore(uid, input) {
     return null;
   }
 }
-
-// ── 매장 업데이트 (부분 merge) ──
-// patch.categoryIds가 있으면 최대 4개로 자름
 
 export async function updateStore(uid, storeId, patch) {
   try {
@@ -118,19 +119,13 @@ export async function updateStore(uid, storeId, patch) {
   }
 }
 
-// ── 체크리스트만 저장 (디바운스용) ──
-
 export async function saveStoreChecklist(uid, storeId, checklist) {
   return updateStore(uid, storeId, { checklist });
 }
 
-// ── 샵인샵 관리 ──
-
 export async function saveShopInShops(uid, storeId, shopInShops) {
   return updateStore(uid, storeId, { shopInShops });
 }
-
-// ── AI 캐시 저장 ──
 
 export async function saveAiCache(uid, storeId, cacheKey, content) {
   try {
@@ -148,8 +143,6 @@ export async function saveAiCache(uid, storeId, cacheKey, content) {
   }
 }
 
-// ── 매장 삭제 ──
-
 export async function deleteStore(uid, storeId) {
   try {
     const ref = doc(db, 'baemin', uid, 'stores', storeId);
@@ -159,4 +152,74 @@ export async function deleteStore(uid, storeId) {
     console.error('deleteStore error:', err);
     return false;
   }
+}
+
+// ─────────────────────────────────────────────
+// 그룹핑 헬퍼
+// ─────────────────────────────────────────────
+
+// 매장에서 그룹 키 추출
+// 우선순위: businessGroupName > businessId > '__unclassified__' (기본 사업자)
+export function getGroupKey(store) {
+  if (!store) return UNCLASSIFIED_KEY;
+  const name = (store.businessGroupName || '').trim();
+  if (name) return `name:${name}`;
+  const bid = (store.businessId || '').trim();
+  if (bid) return `bid:${bid}`;
+  return UNCLASSIFIED_KEY;  // 미분류도 "하나의 사업자" 그룹으로 취급
+}
+
+// 그룹 표시용 레이블 (드롭다운 헤더에 쓸 이름)
+export function getGroupLabel(store) {
+  if (!store) return '';
+  const name = (store.businessGroupName || '').trim();
+  if (name) return name;
+  const bid = (store.businessId || '').trim();
+  if (bid) return bid;
+  return '';  // 미분류는 빈 문자열 (UI에서 헤더 안 보임)
+}
+
+// 매장 리스트를 그룹별로 묶기
+// 반환: [{ key, label, stores: [...] }, ...]
+// - 미분류 그룹은 맨 앞에 배치 (드롭다운에서 헤더 없이 먼저 표시)
+// - 나머지 그룹은 첫 매장 createdAt 기준 오름차순
+export function groupStoresByBusiness(stores) {
+  if (!Array.isArray(stores) || stores.length === 0) return [];
+
+  const groups = new Map();
+
+  for (const s of stores) {
+    const key = getGroupKey(s);
+    const label = getGroupLabel(s);
+
+    if (!groups.has(key)) {
+      groups.set(key, { key, label, stores: [] });
+    }
+    groups.get(key).stores.push(s);
+  }
+
+  // 정렬: 미분류는 맨 앞, 나머지는 createdAt 순
+  const arr = Array.from(groups.values());
+  arr.sort((a, b) => {
+    if (a.key === UNCLASSIFIED_KEY) return -1;
+    if (b.key === UNCLASSIFIED_KEY) return 1;
+    const aTime = a.stores[0]?.createdAt?.seconds || 0;
+    const bTime = b.stores[0]?.createdAt?.seconds || 0;
+    return aTime - bTime;
+  });
+
+  return arr;
+}
+
+// 같은 그룹에 속한 매장 수 세기 (4개 초과 경고용)
+// - 미분류 매장도 이제 경고 대상 (같은 "기본 사업자"로 간주)
+// - excludeStoreId: 수정 시 자기 자신 제외
+export function countStoresInSameGroup(stores, targetStore, excludeStoreId = null) {
+  if (!targetStore) return 0;
+  const targetKey = getGroupKey(targetStore);
+
+  return stores.filter(s => {
+    if (excludeStoreId && s.id === excludeStoreId) return false;
+    return getGroupKey(s) === targetKey;
+  }).length;
 }

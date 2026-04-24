@@ -1,22 +1,46 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   BAEMIN_CATEGORIES,
   MAX_CATEGORIES_PER_STORE,
   toggleCategoryId,
 } from '../data/categories';
+import {
+  MAX_STORES_PER_BUSINESS,
+  getGroupKey,
+  countStoresInSameGroup,
+} from '../lib/stores';
 
 // 매장 추가 모달
 // props:
-//   - onSubmit({ name, categoryIds, businessId }) => Promise<string | null>
+//   - onSubmit({ name, categoryIds, businessId, businessGroupName }) => Promise<string | null>
 //   - onClose?: () => void
 //   - forceFirst?: boolean
+//   - existingStores?: []  ← 4개 초과 경고 계산용
 
-export default function StoreAddModal({ onSubmit, onClose, forceFirst = false }) {
+export default function StoreAddModal({
+  onSubmit,
+  onClose,
+  forceFirst = false,
+  existingStores = [],
+}) {
   const [name, setName] = useState('');
   const [categoryIds, setCategoryIds] = useState([]);
   const [businessId, setBusinessId] = useState('');
+  const [businessGroupName, setBusinessGroupName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // 현재 입력값으로 만들어질 가상 매장 객체 (경고 계산용)
+  const previewStore = { businessId, businessGroupName };
+  const sameGroupKey = getGroupKey(previewStore);
+
+  // 같은 그룹에 이미 몇 개? (미분류는 경고 없음)
+  const existingCount = useMemo(() => {
+    if (sameGroupKey === null) return 0;  // 미분류
+    return countStoresInSameGroup(existingStores, previewStore);
+  }, [existingStores, sameGroupKey, businessId, businessGroupName]);
+
+  const showOverLimit = existingCount >= MAX_STORES_PER_BUSINESS;
 
   const canSubmit = name.trim() && categoryIds.length > 0 && !submitting;
 
@@ -33,6 +57,7 @@ export default function StoreAddModal({ onSubmit, onClose, forceFirst = false })
         name: name.trim(),
         categoryIds,
         businessId: businessId.trim(),
+        businessGroupName: businessGroupName.trim(),
       });
       if (!storeId) {
         setError('매장 생성에 실패했습니다. 다시 시도해주세요.');
@@ -72,6 +97,19 @@ export default function StoreAddModal({ onSubmit, onClose, forceFirst = false })
           )}
         </div>
 
+        {/* 4개 초과 경고 배너 */}
+        {showOverLimit && (
+          <div style={S.warnBanner}>
+            <span style={S.warnIcon}>⚠️</span>
+            <div style={S.warnText}>
+              이 사업자에 이미 {existingCount}개 매장이 있습니다.{' '}
+              <span style={S.warnSub}>
+                배민은 사업자 1개당 최대 {MAX_STORES_PER_BUSINESS}개 매장까지 권장합니다.
+              </span>
+            </div>
+          </div>
+        )}
+
         <div style={S.body}>
           {/* 매장명 */}
           <div style={S.field}>
@@ -89,7 +127,7 @@ export default function StoreAddModal({ onSubmit, onClose, forceFirst = false })
             />
           </div>
 
-          {/* 카테고리 (최대 4개) */}
+          {/* 카테고리 */}
           <div style={S.field}>
             <label style={S.label}>
               카테고리 <span style={S.req}>필수</span>
@@ -123,20 +161,39 @@ export default function StoreAddModal({ onSubmit, onClose, forceFirst = false })
             </div>
           </div>
 
-          {/* 사업자번호 */}
-          <div style={S.field}>
-            <label style={S.label}>
-              사업자번호 <span style={S.opt}>선택</span>
-              <span style={S.hint}>나중에 입력해도 됩니다</span>
-            </label>
-            <input
-              style={S.input}
-              type='text'
-              value={businessId}
-              onChange={(e) => setBusinessId(e.target.value)}
-              placeholder='예: 123-45-67890'
-              maxLength={20}
-            />
+          {/* 사업자 그룹 (선택) */}
+          <div style={S.groupBox}>
+            <div style={S.groupTitle}>
+              <span>📋 사업자 정보</span>
+              <span style={S.opt}>모두 선택</span>
+            </div>
+            <div style={S.groupHint}>
+              같은 사업자의 매장끼리 묶여서 관리됩니다. 사업자명이 있으면 그 이름으로, 없으면 사업자번호로 그룹핑됩니다.
+            </div>
+
+            <div style={S.fieldRow}>
+              <label style={S.labelSmall}>사업자명</label>
+              <input
+                style={S.input}
+                type='text'
+                value={businessGroupName}
+                onChange={(e) => setBusinessGroupName(e.target.value)}
+                placeholder='예: (주)단꿈 · 영일이F&B · 홍길동 개인사업자'
+                maxLength={40}
+              />
+            </div>
+
+            <div style={S.fieldRow}>
+              <label style={S.labelSmall}>사업자번호</label>
+              <input
+                style={S.input}
+                type='text'
+                value={businessId}
+                onChange={(e) => setBusinessId(e.target.value)}
+                placeholder='예: 123-45-67890'
+                maxLength={20}
+              />
+            </div>
           </div>
 
           {error && <div style={S.error}>{error}</div>}
@@ -198,11 +255,26 @@ const S = {
     fontSize: '14px', flexShrink: 0,
   },
 
+  warnBanner: {
+    display: 'flex', alignItems: 'flex-start', gap: '10px',
+    padding: '12px 20px',
+    background: 'rgba(245,160,65,.08)',
+    borderBottom: '1px solid rgba(245,160,65,.3)',
+  },
+  warnIcon: { fontSize: '16px', flexShrink: 0, marginTop: '1px' },
+  warnText: { fontSize: '12.5px', color: '#F5A041', fontWeight: 600, lineHeight: 1.5 },
+  warnSub: { color: '#d49140', fontWeight: 400 },
+
   body: { padding: '20px 24px', overflowY: 'auto', flex: 1 },
   field: { marginBottom: '20px' },
+  fieldRow: { marginBottom: '10px' },
   label: {
     display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
     fontSize: '13px', fontWeight: 600, color: '#e8ede8', marginBottom: '8px',
+  },
+  labelSmall: {
+    display: 'block',
+    fontSize: '11.5px', fontWeight: 500, color: '#9aada6', marginBottom: '5px',
   },
   req: {
     fontSize: '10.5px', fontWeight: 700, color: '#ef5b5b',
@@ -232,6 +304,20 @@ const S = {
     transition: 'border-color .15s',
   },
 
+  groupBox: {
+    padding: '14px 16px', marginBottom: '20px',
+    background: 'rgba(255,255,255,.02)',
+    border: '1px solid #2a3030', borderRadius: '12px',
+  },
+  groupTitle: {
+    display: 'flex', alignItems: 'center', gap: '8px',
+    fontSize: '13px', fontWeight: 600, color: '#e8ede8', marginBottom: '4px',
+  },
+  groupHint: {
+    fontSize: '11.5px', color: '#607570', lineHeight: 1.5,
+    marginBottom: '14px',
+  },
+
   catGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
@@ -251,7 +337,7 @@ const S = {
     border: '1px solid #3dba6f',
     color: '#3dba6f',
     fontWeight: 600,
-    paddingRight: '28px',  // 체크 표시 공간
+    paddingRight: '28px',
   },
   catBtnDisabled: {
     opacity: 0.35,
