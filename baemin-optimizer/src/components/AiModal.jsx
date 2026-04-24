@@ -1,143 +1,144 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
-// ── 업종 프리셋 데이터 ──────────────────────────────
+// ── 업종 프리셋 데이터 (menuname의 각 필드는 배열 → 매번 랜덤 선택) ──
 const PRESETS = {
   chicken: {
     label: '🍗 치킨',
-    intro: { category:'치킨 전문점', mainMenu:'후라이드, 양념치킨, 반반', feature:'당일 도계, 국내산 닭만 사용', style:'1인 반마리 가능' },
-    order: { category:'치킨', mainMenu:'후라이드, 양념', includes:'치킨무, 소스', allergy:'없음', spicy:'가능', peakTime:'20~30분' },
-    notice: { category:'치킨 전문점', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 치즈볼 4개 증정' },
-    menuname: { currentName:'후라이드치킨', category:'치킨', feature:'당일 도계, 국내산', ingredient:'국내산 닭, 직접 배합 튀김가루' },
-    menudesc: { menuName:'반반치킨', taste:'바삭하고 촉촉한, 달콤매콤', compose:'한마리 / 치킨무·음료 포함' },
-    reply: { storeName:'치킨 가게', review:'', rating:'5' },
+    intro:    { category:'치킨 전문점', mainMenu:'후라이드, 양념치킨, 반반', feature:'당일 도계, 국내산 닭만 사용', style:'1인 반마리 가능' },
+    order:    { category:'치킨', mainMenu:'후라이드, 양념', includes:'치킨무, 소스', allergy:'없음', spicy:'가능', peakTime:'20~30분' },
+    notice:   { category:'치킨 전문점', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 치즈볼 4개 증정' },
+    menuname: { currentName:['후라이드치킨','양념치킨','반반치킨','간장치킨','순살치킨'], category:'치킨', feature:['당일 도계, 국내산','바삭함 극대화','겉바속촉, 육즙 가득','달콤매콤 양념','뼈 없이 편한'], ingredient:['국내산 닭, 직접 배합 튀김가루','국내산 생닭, 수제 양념','국내산 닭 순살, 특제 가루'] },
+    menudesc: { menuName:['반반치킨','후라이드치킨','양념치킨','순살치킨'], taste:['바삭하고 촉촉한, 달콤매콤','겉바속촉한, 육즙 가득','달콤하고 쫄깃한, 고소한 양념','부드럽고 바삭한, 뼈 없이 편한'], compose:['한마리 / 치킨무·콜라 포함','반반 / 치킨무·음료 선택','한마리 + 감자튀김 세트','순살 500g / 콜라 1.25L 포함'] },
+    reply:    { storeName:'치킨 가게', review:'', rating:'5' },
   },
   chinese: {
     label: '🥡 중식',
-    intro: { category:'중식 전문점', mainMenu:'짜장면, 짬뽕, 탕수육', feature:'수타 면발, 직접 내린 육수', style:'' },
-    order: { category:'중식', mainMenu:'짜장면, 짬뽕', includes:'단무지, 양파', allergy:'없음', spicy:'가능', peakTime:'20~25분' },
-    notice: { category:'중국집', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 군만두 4개 증정' },
-    menuname: { currentName:'짬뽕', category:'중식', feature:'수타 면발, 불맛', ingredient:'해물, 수타면, 직접 낸 육수' },
-    menudesc: { menuName:'해물짬뽕', taste:'얼큰하고 시원한, 불향 가득', compose:'1인분 / 단무지·양파 포함' },
-    reply: { storeName:'중국집', review:'', rating:'5' },
+    intro:    { category:'중식 전문점', mainMenu:'짜장면, 짬뽕, 탕수육', feature:'수타 면발, 직접 내린 육수', style:'' },
+    order:    { category:'중식', mainMenu:'짜장면, 짬뽕', includes:'단무지, 양파', allergy:'없음', spicy:'가능', peakTime:'20~25분' },
+    notice:   { category:'중국집', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 군만두 4개 증정' },
+    menuname: { currentName:['짜장면','짬뽕','탕수육','간짜장','볶음밥'], category:'중식', feature:['수타 면발, 불맛','진한 춘장','바삭함 + 달콤한 소스','현지식 볶음'], ingredient:['해물, 수타면, 직접 낸 육수','국내산 돼지등심, 특제 소스','돼지고기, 양파, 춘장'] },
+    menudesc: { menuName:['해물짬뽕','짜장면','탕수육','볶음밥'], taste:['얼큰하고 시원한, 불향 가득','진한 춘장, 쫄깃한 수타면','바삭하고 달콤한, 소스 끼얹어','불향 폭발, 계란 고소한'], compose:['1인분 / 단무지·양파 포함','곱빼기 / 단무지 포함','소자 / 2인분 기준','2인 세트 / 짜장+짬뽕+탕수육'] },
+    reply:    { storeName:'중국집', review:'', rating:'5' },
   },
   donkatsu: {
     label: '🍱 돈까스·회·일식',
-    intro: { category:'돈까스·일식 전문점', mainMenu:'등심돈까스, 모둠회, 초밥', feature:'수제 빵가루, 당일 입고 활어', style:'' },
-    order: { category:'돈까스·일식', mainMenu:'등심돈까스', includes:'밥, 된장국, 양배추', allergy:'갑각류', spicy:'불가능', peakTime:'15~20분' },
-    notice: { category:'돈까스·일식', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 계란 장조림 증정' },
-    menuname: { currentName:'돈까스', category:'돈까스·일식', feature:'수제 빵가루, 국내산 돼지', ingredient:'국내산 등심, 수제 빵가루' },
-    menudesc: { menuName:'등심돈까스', taste:'바삭하고 육즙 가득한', compose:'1인분 / 밥·된장국·양배추 포함' },
-    reply: { storeName:'돈까스 가게', review:'', rating:'5' },
+    intro:    { category:'돈까스·일식 전문점', mainMenu:'등심돈까스, 모둠회, 초밥', feature:'수제 빵가루, 당일 입고 활어', style:'' },
+    order:    { category:'돈까스·일식', mainMenu:'등심돈까스', includes:'밥, 된장국, 양배추', allergy:'갑각류', spicy:'불가능', peakTime:'15~20분' },
+    notice:   { category:'돈까스·일식', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 계란 장조림 증정' },
+    menuname: { currentName:['등심돈까스','안심돈까스','카츠동','히레카츠','치즈돈까스','연어초밥','모둠회'], category:'돈까스·일식', feature:['수제 빵가루, 국내산 돼지','바삭함 + 두툼함','부드러움','당일 입고 활어'], ingredient:['국내산 등심, 수제 빵가루','국내산 돼지 안심','당일 활어, 숙성 연어'] },
+    menudesc: { menuName:['등심돈까스','안심돈까스','카츠동','연어초밥 12pc'], taste:['바삭하고 육즙 가득한','부드럽고 담백한, 겉바속촉','부드러운 계란과 바삭한 카츠의 조화','입에서 녹는, 신선하고 담백한'], compose:['1인분 / 밥·된장국·양배추 포함','1인분 / 밥·단무지·미소장국','12피스 / 미소된장국·단무지 포함'] },
+    reply:    { storeName:'돈까스 가게', review:'', rating:'5' },
   },
   pizza: {
     label: '🍕 피자',
-    intro: { category:'피자 전문점', mainMenu:'페퍼로니, 고르곤졸라, 불고기피자', feature:'화덕 구이, 당일 반죽 수제 도우', style:'' },
-    order: { category:'피자', mainMenu:'페퍼로니피자', includes:'피클, 소스', allergy:'없음', spicy:'불가능', peakTime:'20~25분' },
-    notice: { category:'피자 전문점', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 콜라 1.25L 증정' },
-    menuname: { currentName:'페퍼로니피자', category:'피자', feature:'화덕 구이, 수제 도우', ingredient:'자연치즈, 수제 도우' },
-    menudesc: { menuName:'페퍼로니피자 L', taste:'치즈 쭉 늘어나는, 짭조름한', compose:'Large 31cm / 3~4인분' },
-    reply: { storeName:'피자 가게', review:'', rating:'5' },
+    intro:    { category:'피자 전문점', mainMenu:'페퍼로니, 고르곤졸라, 불고기피자', feature:'화덕 구이, 당일 반죽 수제 도우', style:'' },
+    order:    { category:'피자', mainMenu:'페퍼로니피자', includes:'피클, 소스', allergy:'없음', spicy:'불가능', peakTime:'20~25분' },
+    notice:   { category:'피자 전문점', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 콜라 1.25L 증정' },
+    menuname: { currentName:['페퍼로니피자','고르곤졸라피자','불고기피자','하와이안피자','콤비네이션','치즈피자'], category:'피자', feature:['화덕 구이, 수제 도우','치즈 듬뿍','달콤한 꿀 디핑','한국인 입맛 맞춤'], ingredient:['자연치즈, 수제 도우','4가지 치즈','페퍼로니 · 모차렐라'] },
+    menudesc: { menuName:['페퍼로니피자','고르곤졸라피자','불고기피자','콤비네이션'], taste:['치즈 쭉 늘어나는, 짭조름한','달콤하고 짭짤한, 꿀에 찍어 먹는','한국식 달콤한 양념, 쫄깃한 도우','다양한 토핑의 조화, 한 판에 다 있는'], compose:['Large 31cm / 3~4인분','Regular 25cm / 2인분','L + 사이드 세트','2판 / 콜라 1.25L 포함'] },
+    reply:    { storeName:'피자 가게', review:'', rating:'5' },
   },
   fastfood: {
     label: '🍔 패스트푸드',
-    intro: { category:'수제버거·패스트푸드', mainMenu:'치즈버거, 베이컨버거, 감자튀김', feature:'100% 수제 패티, 당일 반죽 번', style:'빠른 조리, 1인 세트 가능' },
-    order: { category:'버거·패스트푸드', mainMenu:'시그니처 치즈버거', includes:'감자튀김, 소스', allergy:'없음', spicy:'가능', peakTime:'15~20분' },
-    notice: { category:'수제버거', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 감자튀김 무료 추가' },
-    menuname: { currentName:'치즈버거', category:'버거·패스트푸드', feature:'수제 패티, 직접 반죽 번', ingredient:'국내산 소고기 패티, 수제 번' },
-    menudesc: { menuName:'시그니처 치즈버거', taste:'육즙 가득한, 진한 치즈맛', compose:'1인분 / 감튀·콜라 포함' },
-    reply: { storeName:'버거 가게', review:'', rating:'5' },
+    intro:    { category:'수제버거·패스트푸드', mainMenu:'치즈버거, 베이컨버거, 더블패티', feature:'100% 수제 패티, 당일 반죽 번', style:'빠른 조리, 1인 세트 가능' },
+    order:    { category:'버거·패스트푸드', mainMenu:'시그니처 치즈버거', includes:'감자튀김, 소스', allergy:'없음', spicy:'가능', peakTime:'15~20분' },
+    notice:   { category:'수제버거', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 감자튀김 무료 추가' },
+    menuname: { currentName:['시그니처 치즈버거','베이컨버거','더블패티버거','불고기버거','새우버거'], category:'버거·패스트푸드', feature:['수제 패티, 직접 반죽 번','육즙 폭발','짭짤한 베이컨','통새우 3마리, 바삭함'], ingredient:['국내산 한우 패티, 수제 번','브리오슈 번, 베이컨','통새우, 양상추'] },
+    menudesc: { menuName:['시그니처 치즈버거','베이컨버거','더블패티버거'], taste:['육즙 가득한, 진한 치즈맛','짭짤하고 고소한, 바삭한 베이컨','패티 두 장의 묵직함, 든든한 한끼'], compose:['1인분 / 감튀·콜라 포함','세트 / 감튀·음료 포함','2인 세트 / 감튀 2개·음료 2개'] },
+    reply:    { storeName:'버거 가게', review:'', rating:'5' },
   },
   jjim: {
     label: '🍲 찜·탕·찌개',
-    intro: { category:'찜·탕 전문', mainMenu:'갈비찜, 감자탕, 아구찜', feature:'당일 끓이는 진한 육수, 국내산 재료', style:'' },
-    order: { category:'찜·탕', mainMenu:'갈비찜', includes:'공기밥, 김치', allergy:'없음', spicy:'가능', peakTime:'25~35분' },
-    notice: { category:'찜·탕 전문점', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 공깃밥 추가 증정' },
-    menuname: { currentName:'갈비찜', category:'찜·탕', feature:'당일 끓임, 국내산', ingredient:'국내산 갈비, 당근, 밤, 비법 양념' },
-    menudesc: { menuName:'갈비찜 2~3인분', taste:'달콤짭짤한, 살이 살살 녹는', compose:'2~3인분 / 공깃밥 2개·김치 포함' },
-    reply: { storeName:'찜 가게', review:'', rating:'5' },
+    intro:    { category:'찜·탕 전문', mainMenu:'갈비찜, 감자탕, 아구찜', feature:'당일 끓이는 진한 육수, 국내산 재료', style:'' },
+    order:    { category:'찜·탕', mainMenu:'갈비찜', includes:'공기밥, 김치', allergy:'없음', spicy:'가능', peakTime:'25~35분' },
+    notice:   { category:'찜·탕 전문점', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 공깃밥 추가 증정' },
+    menuname: { currentName:['갈비찜','감자탕','김치찜','해물탕','닭볶음탕','뼈해장국','아구찜'], category:'찜·탕', feature:['당일 끓임, 국내산','해장 최고, 뼈 푸짐','묵은지 깊은 맛','얼큰함'], ingredient:['국내산 갈비, 당근, 밤','돼지등뼈, 묵은지, 감자','국산 아구, 콩나물'] },
+    menudesc: { menuName:['갈비찜','감자탕','김치찜','닭볶음탕'], taste:['달콤짭짤한, 살이 살살 녹는','얼큰하고 진한, 해장 최고','묵은지 시큼한, 고기 푸짐','매콤달콤한, 쫀득한 닭고기'], compose:['2~3인분 / 공깃밥 2개·김치 포함','2~3인분 / 공깃밥·소면 포함','2인분 / 공깃밥 2개·반찬','2~3인분 / 공깃밥 포함'] },
+    reply:    { storeName:'찜 가게', review:'', rating:'5' },
   },
   jokbal: {
     label: '🍖 족발·보쌈',
-    intro: { category:'족발·보쌈 전문', mainMenu:'앞다리족발, 보쌈, 막국수', feature:'매일 삶는 당일 족발, 국내산 돼지', style:'' },
-    order: { category:'족발', mainMenu:'앞다리족발', includes:'쌈채소, 마늘, 새우젓', allergy:'없음', spicy:'가능', peakTime:'20~30분' },
-    notice: { category:'족발 전문점', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 막국수 1인분 증정' },
-    menuname: { currentName:'족발', category:'족발·보쌈', feature:'당일 삶기, 국내산 돼지', ingredient:'국내산 앞다리, 비법 양념' },
-    menudesc: { menuName:'앞다리족발 中', taste:'쫄깃하고 담백한, 잡내 없는', compose:'중자 700g / 쌈채소·마늘·새우젓 포함' },
-    reply: { storeName:'족발 가게', review:'', rating:'5' },
+    intro:    { category:'족발·보쌈 전문', mainMenu:'앞다리족발, 보쌈, 막국수', feature:'매일 삶는 당일 족발, 국내산 돼지', style:'' },
+    order:    { category:'족발', mainMenu:'앞다리족발', includes:'쌈채소, 마늘, 새우젓', allergy:'없음', spicy:'가능', peakTime:'20~30분' },
+    notice:   { category:'족발 전문점', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 막국수 1인분 증정' },
+    menuname: { currentName:['앞다리족발','보쌈','매운족발','불족발','족발+보쌈 세트'], category:'족발·보쌈', feature:['당일 삶기, 국내산 돼지','쫄깃함','묵은지 깊은 맛','매운맛 강함'], ingredient:['국내산 앞다리, 비법 양념','묵은지, 국내산 돼지','신안 천일염, 허브'] },
+    menudesc: { menuName:['앞다리족발','보쌈','매운족발'], taste:['쫄깃하고 담백한, 잡내 없는','부드럽고 고소한, 김치와 환상조합','화끈하게 매운, 중독성 있는'], compose:['중자 700g / 쌈채소·마늘·새우젓 포함','중자 / 묵은지·쌈무 포함','대자 / 주먹밥 2개 포함'] },
+    reply:    { storeName:'족발 가게', review:'', rating:'5' },
   },
   bunsik: {
     label: '🥟 분식',
-    intro: { category:'분식 전문점', mainMenu:'떡볶이, 김밥, 순대', feature:'매일 아침 김밥 말기, 국내산 쌀', style:'1인 세트 다양' },
-    order: { category:'분식', mainMenu:'떡볶이, 김밥', includes:'국물', allergy:'없음', spicy:'가능', peakTime:'15~20분' },
-    notice: { category:'분식 전문점', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 순대 1인분 증정' },
-    menuname: { currentName:'떡볶이', category:'분식', feature:'멸치 육수, 고추장 양념', ingredient:'국내산 쌀떡, 어묵, 계란' },
-    menudesc: { menuName:'떡볶이', taste:'달콤매콤한, 쫄깃한', compose:'2인분 700g / 어묵·계란 포함' },
-    reply: { storeName:'분식 가게', review:'', rating:'5' },
+    intro:    { category:'분식 전문점', mainMenu:'떡볶이, 김밥, 순대', feature:'매일 아침 김밥 말기, 국내산 쌀', style:'1인 세트 다양' },
+    order:    { category:'분식', mainMenu:'떡볶이, 김밥', includes:'국물', allergy:'없음', spicy:'가능', peakTime:'15~20분' },
+    notice:   { category:'분식 전문점', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 순대 1인분 증정' },
+    menuname: { currentName:['떡볶이','로제떡볶이','차돌떡볶이','김밥','순대','튀김모둠'], category:'분식', feature:['멸치 육수, 고추장 양념','크리미하고 부드러움','차돌박이 듬뿍','엄마 손맛'], ingredient:['국내산 쌀떡, 어묵, 계란','우유 베이스 로제소스','차돌박이, 떡'] },
+    menudesc: { menuName:['떡볶이','로제떡볶이','차돌떡볶이','김밥'], taste:['크리미하고 매콤한, 쫄깃한','달콤매콤한, 국물 진한','차돌박이 고소함, 크림 떡볶이','고소하고 담백한, 엄마표'], compose:['2인분 / 계란·어묵 포함','1인분 / 튀김 2개 포함','떡볶이+김밥 세트 / 국물 포함','1줄 / 반찬 포함'] },
+    reply:    { storeName:'분식 가게', review:'', rating:'5' },
   },
   cafe: {
     label: '☕ 카페·디저트',
-    intro: { category:'카페·디저트', mainMenu:'아메리카노, 라떼, 케이크', feature:'직접 로스팅 원두, 당일 제조 디저트', style:'' },
-    order: { category:'카페', mainMenu:'라떼, 아메리카노', includes:'없음', allergy:'유제품(라떼류)', spicy:'불가능', peakTime:'10~15분' },
-    notice: { category:'카페', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 쿠키 1개 증정' },
-    menuname: { currentName:'라떼', category:'카페·디저트', feature:'직접 로스팅, 스페셜티', ingredient:'직접 로스팅 원두, 신선 우유' },
-    menudesc: { menuName:'시그니처 라떼', taste:'부드럽고 고소한, 풍부한 크레마', compose:'Regular 355ml / Hot·Ice 선택' },
-    reply: { storeName:'카페', review:'', rating:'5' },
+    intro:    { category:'카페·디저트', mainMenu:'아메리카노, 라떼, 케이크', feature:'직접 로스팅 원두, 당일 제조 디저트', style:'' },
+    order:    { category:'카페', mainMenu:'라떼, 아메리카노', includes:'없음', allergy:'유제품(라떼류)', spicy:'불가능', peakTime:'10~15분' },
+    notice:   { category:'카페', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 쿠키 1개 증정' },
+    menuname: { currentName:['시그니처 라떼','아메리카노','바닐라라떼','아인슈페너','딸기스무디','흑임자라떼','티라미수','크로플'], category:'카페·디저트', feature:['직접 로스팅, 스페셜티','진한 원두, 매일 로스팅','크림 듬뿍','수제 베이커리'], ingredient:['직접 로스팅 원두, 신선 우유','국내산 딸기, 생우유','국내산 버터, 생크림'] },
+    menudesc: { menuName:['시그니처 라떼','아메리카노','아인슈페너','딸기스무디','티라미수'], taste:['부드럽고 고소한, 풍부한 크레마','진하고 쌉싸름한, 묵직한 바디감','진한 에스프레소 + 부드러운 크림','상큼한 딸기 과육, 시원한 식감','부드럽고 진한, 달콤쌉싸름한'], compose:['Regular 355ml / Hot·Ice 선택','Large 500ml / 생딸기 사용','ICE 400ml / 크림 듬뿍','1조각 120g'] },
+    reply:    { storeName:'카페', review:'', rating:'5' },
   },
   korean: {
     label: '🍚 한식',
-    intro: { category:'한식 전문점', mainMenu:'제육볶음, 김치찌개, 비빔밥', feature:'직접 담근 김치, 당일 조리', style:'1인분 주문 가능' },
-    order: { category:'한식', mainMenu:'제육볶음', includes:'공기밥, 국, 김치, 반찬', allergy:'없음', spicy:'가능', peakTime:'20~30분' },
-    notice: { category:'한식 전문점', noticeType:'임시휴무', noticeDetail:'매주 일요일 정기 휴무입니다' },
-    menuname: { currentName:'제육볶음', category:'한식', feature:'직화, 국내산 돼지', ingredient:'국내산 돼지고기, 직접 담근 김치' },
-    menudesc: { menuName:'제육볶음', taste:'불향 가득한, 매콤달콤한', compose:'1인분 / 공깃밥·국·김치 포함' },
-    reply: { storeName:'한식 가게', review:'', rating:'5' },
+    intro:    { category:'한식 전문점', mainMenu:'제육볶음, 김치찌개, 비빔밥', feature:'직접 담근 김치, 당일 조리', style:'1인분 주문 가능' },
+    order:    { category:'한식', mainMenu:'제육볶음', includes:'공기밥, 국, 김치, 반찬', allergy:'없음', spicy:'가능', peakTime:'20~30분' },
+    notice:   { category:'한식 전문점', noticeType:'임시휴무', noticeDetail:'매주 일요일 정기 휴무입니다' },
+    menuname: { currentName:['제육덮밥','김치찌개 정식','순두부찌개','비빔밥','불고기 정식','육개장'], category:'한식', feature:['직화, 국내산 돼지','직접 담근 묵은지','얼큰함','집밥 정성'], ingredient:['국내산 돼지고기, 직접 담근 김치','묵은지, 국산 콩','국내산 나물 7가지'] },
+    menudesc: { menuName:['제육덮밥','김치찌개','순두부찌개','비빔밥'], taste:['불향 가득한, 매콤달콤한','묵은지 진한, 얼큰한 국물','부드럽고 얼큰한, 해장에 좋은','나물 향 그윽한, 고추장 매콤한'], compose:['1인분 / 공깃밥·국·김치 포함','2인분 / 공깃밥 2개·반찬 3종','1인 정식 / 밥·반찬4종·국','곱빼기 / 반찬 3종 포함'] },
+    reply:    { storeName:'한식 가게', review:'', rating:'5' },
   },
   gogi: {
     label: '🥩 고기·구이',
-    intro: { category:'고기구이 전문', mainMenu:'삼겹살, 목살, 갈비', feature:'저온 숙성 냉장육, 직접 구워 배달', style:'' },
-    order: { category:'고기구이', mainMenu:'삼겹살', includes:'쌈채소, 된장, 마늘', allergy:'없음', spicy:'불가능', peakTime:'20~30분' },
-    notice: { category:'삼겹살 전문점', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 된장찌개 증정' },
-    menuname: { currentName:'삼겹살', category:'고기구이', feature:'저온 숙성, 직화 구이', ingredient:'국내산 냉장 삼겹살' },
-    menudesc: { menuName:'숙성 삼겹살 300g', taste:'쫀득하고 고소한, 육즙 가득', compose:'300g / 쌈채소·된장·마늘 포함' },
-    reply: { storeName:'삼겹살 가게', review:'', rating:'5' },
+    intro:    { category:'고기구이 전문', mainMenu:'삼겹살, 목살, 갈비', feature:'저온 숙성 냉장육, 직접 구워 배달', style:'' },
+    order:    { category:'고기구이', mainMenu:'삼겹살', includes:'쌈채소, 된장, 마늘', allergy:'없음', spicy:'불가능', peakTime:'20~30분' },
+    notice:   { category:'삼겹살 전문점', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 된장찌개 증정' },
+    menuname: { currentName:['숙성삼겹살','목살구이','한우갈비','양념갈비','대패삼겹살'], category:'고기구이', feature:['저온 숙성, 직화 구이','기름 적고 담백','육즙 폭발','달콤한 양념'], ingredient:['국내산 냉장 삼겹살','국내산 목살','한우 갈비살, 비법 양념'] },
+    menudesc: { menuName:['숙성삼겹살','목살구이','양념갈비'], taste:['쫀득하고 고소한, 육즙 가득','담백하고 부드러운, 기름 적은','달콤짭짤한, 부드러운 식감'], compose:['300g / 쌈채소·된장·마늘 포함','600g / 김치·쌈·된장국 포함','500g / 공깃밥·된장찌개'] },
+    reply:    { storeName:'삼겹살 가게', review:'', rating:'5' },
   },
   western: {
     label: '🍝 양식',
-    intro: { category:'양식·파스타 전문', mainMenu:'크림파스타, 토마토파스타, 스테이크', feature:'생면 사용, 수제 소스', style:'' },
-    order: { category:'파스타·양식', mainMenu:'크림파스타', includes:'빵, 피클', allergy:'견과류', spicy:'불가능', peakTime:'15~20분' },
-    notice: { category:'양식 레스토랑', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 갈릭브레드 증정' },
-    menuname: { currentName:'크림파스타', category:'양식', feature:'생면, 수제 소스', ingredient:'생면, 직접 만든 크림 소스' },
-    menudesc: { menuName:'트러플크림파스타', taste:'진하고 고소한, 향 가득한', compose:'1인분 / 빵·피클 포함' },
-    reply: { storeName:'파스타 가게', review:'', rating:'5' },
+    intro:    { category:'양식·파스타 전문', mainMenu:'크림파스타, 토마토파스타, 스테이크', feature:'생면 사용, 수제 소스', style:'' },
+    order:    { category:'파스타·양식', mainMenu:'크림파스타', includes:'빵, 피클', allergy:'견과류', spicy:'불가능', peakTime:'15~20분' },
+    notice:   { category:'양식 레스토랑', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 갈릭브레드 증정' },
+    menuname: { currentName:['트러플크림파스타','토마토로제','알리오올리오','봉골레','스테이크 세트','라자냐'], category:'양식', feature:['생면, 수제 소스','진한 풍미','담백한 마늘향','안심 스테이크, 프리미엄'], ingredient:['생면, 직접 만든 크림 소스','토마토, 생크림','바지락, 마늘'] },
+    menudesc: { menuName:['트러플크림파스타','토마토로제','알리오올리오','봉골레'], taste:['진하고 고소한, 향 가득한','상큼하고 크리미한, 부드러운','마늘향 가득한, 담백한 오일','조개 우린 시원한, 화이트와인 향'], compose:['1인분 / 빵·피클 포함','런치 세트 / 샐러드·음료','1인분 / 빵·피클 포함'] },
+    reply:    { storeName:'파스타 가게', review:'', rating:'5' },
   },
   asian: {
-    label: '🍜 아시안·분식',
-    intro: { category:'쌀국수·아시안 전문', mainMenu:'쌀국수, 팟타이, 분짜', feature:'12시간 우려낸 육수, 현지 재료 사용', style:'' },
-    order: { category:'아시안', mainMenu:'소고기 쌀국수', includes:'숙주, 라임, 소스', allergy:'없음', spicy:'가능', peakTime:'15~20분' },
-    notice: { category:'아시안 음식점', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 짜조 2개 증정' },
-    menuname: { currentName:'쌀국수', category:'아시안', feature:'12시간 육수, 현지 재료', ingredient:'사골 육수, 현지 향신료' },
-    menudesc: { menuName:'소고기 쌀국수', taste:'시원하고 진한, 담백한', compose:'1인분 / 숙주·라임·고수 포함' },
-    reply: { storeName:'아시안 가게', review:'', rating:'5' },
+    label: '🍜 아시안',
+    intro:    { category:'쌀국수·아시안 전문', mainMenu:'쌀국수, 팟타이, 분짜', feature:'12시간 우려낸 육수, 현지 재료 사용', style:'' },
+    order:    { category:'아시안', mainMenu:'소고기 쌀국수', includes:'숙주, 라임, 소스', allergy:'없음', spicy:'가능', peakTime:'15~20분' },
+    notice:   { category:'아시안 음식점', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 짜조 2개 증정' },
+    menuname: { currentName:['소고기쌀국수','팟타이','분짜','똠양꿍','그린커리','반미'], category:'아시안', feature:['12시간 육수, 현지 재료','현지 그대로','새콤달콤','부드러운 코코넛'], ingredient:['사골 육수, 현지 향신료','쌀국수, 땅콩','코코넛 밀크, 현지 커리 페이스트'] },
+    menudesc: { menuName:['소고기쌀국수','팟타이','분짜','그린커리'], taste:['시원하고 진한, 담백한','달콤짭짤한, 고소한 땅콩','새콤달콤한, 쫄깃한 국수','부드럽고 매콤한, 코코넛 향'], compose:['1인분 / 숙주·라임·고수 포함','1인분 / 숙주·라임 포함','1인분 / 야채·쌀국수 포함','1인분 / 밥·난 선택'] },
+    reply:    { storeName:'아시안 가게', review:'', rating:'5' },
   },
   jokjang: {
     label: '🍻 야식·안주',
-    intro: { category:'야식·안주 전문', mainMenu:'닭발, 곱창, 막창, 먹태', feature:'매일 손질 국내산, 심야 운영', style:'새벽까지 영업' },
-    order: { category:'야식·안주', mainMenu:'국물닭발', includes:'주먹밥, 계란찜', allergy:'없음', spicy:'가능', peakTime:'20~30분' },
-    notice: { category:'야식 전문점', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 먹태 1봉 증정' },
-    menuname: { currentName:'닭발', category:'야식·안주', feature:'매일 손질, 국내산', ingredient:'국내산 닭발, 비법 양념' },
-    menudesc: { menuName:'국물닭발', taste:'화끈하게 매운, 쫄깃한', compose:'2인분 / 주먹밥·계란찜 포함' },
-    reply: { storeName:'야식 가게', review:'', rating:'5' },
+    intro:    { category:'야식·안주 전문', mainMenu:'닭발, 곱창, 막창, 먹태', feature:'매일 손질 국내산, 심야 운영', style:'새벽까지 영업' },
+    order:    { category:'야식·안주', mainMenu:'국물닭발', includes:'주먹밥, 계란찜', allergy:'없음', spicy:'가능', peakTime:'20~30분' },
+    notice:   { category:'야식 전문점', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 먹태 1봉 증정' },
+    menuname: { currentName:['국물닭발','무뼈닭발','모듬곱창','막창구이','먹태 구이','오돌뼈볶음'], category:'야식·안주', feature:['매일 손질, 국내산','매운맛 강함, 술안주','뼈 없이 편한','곱 가득'], ingredient:['국내산 닭발, 비법 양념','소 곱창, 양념','살 두툼한 막창'] },
+    menudesc: { menuName:['국물닭발','무뼈닭발','모듬곱창'], taste:['화끈하게 매운, 쫄깃한','매콤달콤한, 뼈 없이 편한','고소한 곱, 쫀득한 식감'], compose:['2인분 / 주먹밥·계란찜 포함','1인분 / 주먹밥 2개','3~4인분 / 볶음밥 포함'] },
+    reply:    { storeName:'야식 가게', review:'', rating:'5' },
   },
   dosirak: {
     label: '🍙 도시락·죽·간편식',
-    intro: { category:'도시락 전문', mainMenu:'제육도시락, 불고기도시락, 돈까스도시락', feature:'당일 조리, 균형 잡힌 구성', style:'1인분 합리적 가격' },
-    order: { category:'도시락', mainMenu:'제육도시락', includes:'밥, 반찬3종, 국', allergy:'없음', spicy:'가능', peakTime:'15~20분' },
-    notice: { category:'도시락 전문점', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 계란후라이 추가 증정' },
-    menuname: { currentName:'제육도시락', category:'도시락', feature:'당일 조리, 균형 구성', ingredient:'국내산 돼지, 직접 담근 김치' },
-    menudesc: { menuName:'제육도시락', taste:'매콤달콤한, 푸짐한', compose:'1인분 550g / 밥·반찬3종·국 포함' },
-    reply: { storeName:'도시락 가게', review:'', rating:'5' },
+    intro:    { category:'도시락 전문', mainMenu:'제육도시락, 불고기도시락, 돈까스도시락', feature:'당일 조리, 균형 잡힌 구성', style:'1인분 합리적 가격' },
+    order:    { category:'도시락', mainMenu:'제육도시락', includes:'밥, 반찬3종, 국', allergy:'없음', spicy:'가능', peakTime:'15~20분' },
+    notice:   { category:'도시락 전문점', noticeType:'이벤트', noticeDetail:'리뷰 작성 시 계란후라이 추가 증정' },
+    menuname: { currentName:['제육도시락','치킨마요','불고기도시락','돈까스도시락','참치마요','스팸김치'], category:'도시락', feature:['당일 조리, 균형 구성','푸짐함','고소한 마요','간편한 한끼'], ingredient:['국내산 돼지, 직접 담근 김치','닭가슴살, 특제 마요네즈','국내산 돼지, 불고기 양념'] },
+    menudesc: { menuName:['제육도시락','치킨마요','불고기도시락'], taste:['매콤달콤한, 푸짐한','고소하고 부드러운, 아이들 최애','달콤짭짤한, 부드러운 소고기'], compose:['1인분 550g / 밥·반찬3종·국 포함','1인분 / 밥·계란·단무지','1인분 / 밥·반찬4종 포함'] },
+    reply:    { storeName:'도시락 가게', review:'', rating:'5' },
   },
 };
+
 const NOTICE_TYPES = ['이벤트', '임시휴무', '재료소진', '배달지연', '신메뉴출시'];
 
 const DEFAULT_FORM = {
@@ -149,26 +150,37 @@ const DEFAULT_FORM = {
   storeName:'', review:'', rating:'5',
 };
 
+// 배열이면 랜덤 pick, 문자열이면 그대로
+const pick = (v) => Array.isArray(v) ? v[Math.floor(Math.random() * v.length)] : v;
+
 export default function AiModal({ item, onClose }) {
   const [form, setForm]       = useState({ ...DEFAULT_FORM });
   const [preset, setPreset]   = useState('');
+  const [flash, setFlash]     = useState(0); // 필드 깜빡임 트리거
   const [result, setResult]   = useState('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied]   = useState(false);
   const type = item.aiType;
   const set  = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  function applyPreset(key) {
-    setPreset(key);
+  function applyPresetWithRandom(key) {
     if (!key) return;
     const p = PRESETS[key]?.[type];
-    if (p) setForm(f => ({ ...f, ...p }));
+    if (!p) return;
+    const next = {};
+    Object.entries(p).forEach(([k, v]) => { next[k] = pick(v); });
+    setForm(f => ({ ...f, ...next }));
+    setFlash(n => n + 1);
+  }
+
+  function onPresetChange(key) {
+    setPreset(key);
+    applyPresetWithRandom(key);
   }
 
   function reroll() {
     if (!preset) { alert('먼저 업종을 선택해주세요.'); return; }
-    const p = PRESETS[preset]?.[type];
-    if (p) setForm(f => ({ ...f, ...p }));
+    applyPresetWithRandom(preset);
   }
 
   async function generate() {
@@ -199,6 +211,7 @@ export default function AiModal({ item, onClose }) {
   }
 
   const showPreset = ['intro','order','notice','menuname','menudesc'].includes(type);
+  const flashStyle = { background: flash ? 'rgba(61,186,111,.18)' : '#0d0f10', transition: 'background .4s' };
 
   return (
     <div style={S.overlay} onClick={onClose}>
@@ -212,77 +225,73 @@ export default function AiModal({ item, onClose }) {
         </div>
         <div style={S.mbody}>
 
-          {/* 업종 프리셋 */}
           {showPreset && (
             <div style={S.presetWrap}>
-              <label style={S.presetLabel}>⚡ 업종 프리셋 <span style={{color:'#607570',fontWeight:400}}>(선택 시 자동 채움 · 매번 랜덤 조합)</span></label>
+              <label style={S.presetLabel}>⚡ 업종 프리셋 <span style={{color:'#607570',fontWeight:400}}>(선택 시 자동 채움 · 🎲로 다른 조합)</span></label>
               <div style={S.presetRow}>
-                <select style={S.presetSel} value={preset} onChange={e => applyPreset(e.target.value)}>
+                <select style={S.presetSel} value={preset} onChange={e => onPresetChange(e.target.value)}>
                   <option value=''>직접 입력</option>
                   {Object.entries(PRESETS).map(([k,v]) => (
                     <option key={k} value={k}>{v.label}</option>
                   ))}
                 </select>
-                <button style={S.rerollBtn} onClick={reroll} title='다른 조합으로 다시 채우기'>🎲</button>
+                <button style={S.rerollBtn} onClick={reroll} title='같은 업종의 다른 예시로 다시 채우기' className='rerollBtn'>
+                  <span className='diceIcon' style={{display:'inline-block',transition:'transform .4s'}}>🎲</span>
+                  <span style={{fontSize:'13px',fontWeight:600}}>다시</span>
+                </button>
               </div>
             </div>
           )}
 
-          {/* intro */}
           {type==='intro' && <>
             <div style={S.row}>
-              <Field label="업종 *" placeholder="예: 제육볶음 전문점, 치킨집" value={form.category} onChange={v=>set('category',v)} />
-              <Field label="대표 메뉴 *" placeholder="예: 직화 제육볶음, 후라이드" value={form.mainMenu} onChange={v=>set('mainMenu',v)} />
+              <Field label="업종 *" placeholder="예: 제육볶음 전문점, 치킨집" value={form.category} onChange={v=>set('category',v)} flash={flashStyle} />
+              <Field label="대표 메뉴 *" placeholder="예: 직화 제육볶음, 후라이드" value={form.mainMenu} onChange={v=>set('mainMenu',v)} flash={flashStyle} />
             </div>
-            <Field label="특징/차별점" placeholder="예: 직화 불맛, 15년 전통, 국내산 재료" value={form.feature} onChange={v=>set('feature',v)} />
-            <Field label="운영 특이사항" placeholder="예: 1인분 주문 가능, 새벽 영업, 단체 주문 환영" value={form.style} onChange={v=>set('style',v)} />
+            <Field label="특징/차별점" placeholder="예: 직화 불맛, 15년 전통, 국내산 재료" value={form.feature} onChange={v=>set('feature',v)} flash={flashStyle} />
+            <Field label="운영 특이사항" placeholder="예: 1인분 주문 가능, 새벽 영업, 단체 주문 환영" value={form.style} onChange={v=>set('style',v)} flash={flashStyle} />
           </>}
 
-          {/* order */}
           {type==='order' && <>
             <div style={S.row}>
-              <Field label="업종 *" placeholder="예: 한식, 치킨, 분식" value={form.category} onChange={v=>set('category',v)} />
-              <Field label="대표 메뉴 *" placeholder="예: 제육볶음, 후라이드" value={form.mainMenu} onChange={v=>set('mainMenu',v)} />
+              <Field label="업종 *" placeholder="예: 한식, 치킨, 분식" value={form.category} onChange={v=>set('category',v)} flash={flashStyle} />
+              <Field label="대표 메뉴 *" placeholder="예: 제육볶음, 후라이드" value={form.mainMenu} onChange={v=>set('mainMenu',v)} flash={flashStyle} />
             </div>
             <div style={S.row}>
-              <Field label="기본 제공 구성" placeholder="예: 공기밥, 김치, 수저" value={form.includes} onChange={v=>set('includes',v)} />
-              <Field label="알레르기 유발 식재료" placeholder="예: 견과류, 갑각류" value={form.allergy} onChange={v=>set('allergy',v)} />
+              <Field label="기본 제공 구성" placeholder="예: 공기밥, 김치, 수저" value={form.includes} onChange={v=>set('includes',v)} flash={flashStyle} />
+              <Field label="알레르기 유발 식재료" placeholder="예: 견과류, 갑각류" value={form.allergy} onChange={v=>set('allergy',v)} flash={flashStyle} />
             </div>
             <div style={S.row}>
               <SelectField label="맵기 조절" value={form.spicy} onChange={v=>set('spicy',v)} options={['가능','불가능']} />
-              <Field label="피크타임 조리 시간" placeholder="예: 20~30분" value={form.peakTime} onChange={v=>set('peakTime',v)} />
+              <Field label="피크타임 조리 시간" placeholder="예: 20~30분" value={form.peakTime} onChange={v=>set('peakTime',v)} flash={flashStyle} />
             </div>
           </>}
 
-          {/* notice */}
           {type==='notice' && <>
             <div style={S.row}>
-              <Field label="업종 *" placeholder="예: 제육볶음 전문점" value={form.category} onChange={v=>set('category',v)} />
+              <Field label="업종 *" placeholder="예: 제육볶음 전문점" value={form.category} onChange={v=>set('category',v)} flash={flashStyle} />
               <SelectField label="공지 유형" value={form.noticeType} onChange={v=>set('noticeType',v)} options={NOTICE_TYPES} />
             </div>
-            <Field label="세부 내용 *" placeholder="예: 5/20 휴무 / 치즈볼 재료 소진 / 2만원 이상 음료 무료" value={form.noticeDetail} onChange={v=>set('noticeDetail',v)} textarea />
+            <Field label="세부 내용 *" placeholder="예: 5/20 휴무 / 치즈볼 재료 소진 / 2만원 이상 음료 무료" value={form.noticeDetail} onChange={v=>set('noticeDetail',v)} textarea flash={flashStyle} />
           </>}
 
-          {/* menuname */}
           {type==='menuname' && <>
             <div style={S.row}>
-              <Field label="현재 메뉴명 *" placeholder="예: 제육볶음" value={form.currentName} onChange={v=>set('currentName',v)} />
-              <Field label="업종/음식 종류 *" placeholder="예: 한식, 볶음류" value={form.category} onChange={v=>set('category',v)} />
+              <Field label="현재 메뉴명 *" placeholder="예: 제육볶음" value={form.currentName} onChange={v=>set('currentName',v)} flash={flashStyle} />
+              <Field label="업종/음식 종류 *" placeholder="예: 한식, 볶음류" value={form.category} onChange={v=>set('category',v)} flash={flashStyle} />
             </div>
             <div style={S.row}>
-              <Field label="조리 방식·특징" placeholder="예: 직화, 수제, 당일 손질" value={form.feature} onChange={v=>set('feature',v)} />
-              <Field label="주요 재료" placeholder="예: 국내산 돼지고기, 청양고추" value={form.ingredient} onChange={v=>set('ingredient',v)} />
+              <Field label="조리 방식·특징" placeholder="예: 직화, 수제, 당일 손질" value={form.feature} onChange={v=>set('feature',v)} flash={flashStyle} />
+              <Field label="주요 재료" placeholder="예: 국내산 돼지고기, 청양고추" value={form.ingredient} onChange={v=>set('ingredient',v)} flash={flashStyle} />
             </div>
           </>}
 
-          {/* menudesc */}
           {type==='menudesc' && <>
-            <Field label="메뉴명 *" placeholder="예: 직화 불향 제육볶음" value={form.menuName} onChange={v=>set('menuName',v)} />
-            <Field label="맛·식감 *" placeholder="예: 불향 가득한 촉촉한 제육, 매콤달콤" value={form.taste} onChange={v=>set('taste',v)} />
-            <Field label="구성·용량" placeholder="예: 공기밥 포함, 350g, 1~2인분" value={form.compose} onChange={v=>set('compose',v)} />
+            <Field label="메뉴명 *" placeholder="예: 직화 불향 제육볶음" value={form.menuName} onChange={v=>set('menuName',v)} flash={flashStyle} />
+            <Field label="맛·식감 *" placeholder="예: 불향 가득한 촉촉한 제육, 매콤달콤" value={form.taste} onChange={v=>set('taste',v)} flash={flashStyle} />
+            <Field label="구성·용량" placeholder="예: 공기밥 포함, 350g, 1~2인분" value={form.compose} onChange={v=>set('compose',v)} flash={flashStyle} />
           </>}
 
-          {/* reply */}
           {type==='reply' && <>
             <Field label="가게명 *" placeholder="예: 영일이아구찜 창원점" value={form.storeName} onChange={v=>set('storeName',v)} />
             <Field label="고객 리뷰 *" placeholder="리뷰 본문을 붙여넣으세요" value={form.review} onChange={v=>set('review',v)} textarea />
@@ -305,17 +314,24 @@ export default function AiModal({ item, onClose }) {
           )}
         </div>
       </div>
+
+      <style>{`
+        .rerollBtn:hover { background: rgba(61,186,111,.12) !important; }
+        .rerollBtn:hover .diceIcon { transform: rotate(180deg); }
+        .rerollBtn:active { transform: scale(0.95); }
+      `}</style>
     </div>
   );
 }
 
-function Field({ label, placeholder, value, onChange, textarea }) {
+function Field({ label, placeholder, value, onChange, textarea, flash }) {
+  const inputStyle = { ...S.finput, ...(flash || {}) };
   return (
     <div style={S.field}>
       <label style={S.flabel}>{label}</label>
       {textarea
-        ? <textarea style={{ ...S.finput, height:'80px', resize:'vertical' }} placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)} />
-        : <input style={S.finput} placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)} />
+        ? <textarea style={{ ...inputStyle, height:'80px', resize:'vertical' }} placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)} />
+        : <input style={inputStyle} placeholder={placeholder} value={value} onChange={e => onChange(e.target.value)} />
       }
     </div>
   );
@@ -342,10 +358,10 @@ const S = {
   mbody: { padding:'20px' },
 
   presetWrap: { marginBottom:'18px' },
-  presetLabel: { display:'block', fontSize:'12px', fontWeight:700, color:'#e8a020', marginBottom:'8px' },
+  presetLabel: { display:'block', fontSize:'12px', fontWeight:500, color:'#3dba6f', marginBottom:'8px' },
   presetRow: { display:'flex', gap:'8px' },
-  presetSel: { flex:1, background:'#0d0f10', border:'1px solid #3dba6f', borderRadius:'8px', padding:'9px 12px', fontSize:'13px', color:'#e8ede8', outline:'none', cursor:'pointer' },
-  rerollBtn: { width:'40px', height:'40px', background:'#1c2021', border:'1px solid #2a2f30', borderRadius:'8px', fontSize:'18px', cursor:'pointer', flexShrink:0 },
+  presetSel: { flex:1, background:'#1c2021', border:'1px solid rgba(61,186,111,.3)', borderRadius:'8px', padding:'10px 12px', fontSize:'14px', color:'#e8ede8', outline:'none', cursor:'pointer', fontFamily:'inherit' },
+  rerollBtn: { flexShrink:0, padding:'0 14px', minWidth:'68px', background:'#1c2021', border:'1px solid rgba(61,186,111,.3)', borderRadius:'8px', color:'#3dba6f', fontSize:'16px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'4px', whiteSpace:'nowrap', transition:'background .2s, transform .1s' },
 
   row: { display:'flex', gap:'12px' },
   field: { flex:1, marginBottom:'14px' },
