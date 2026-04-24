@@ -1,8 +1,5 @@
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const { type, storeInfo } = req.body;
 
   const prompts = {
@@ -32,23 +29,18 @@ export default async function handler(req, res) {
 [예시 3 — 국밥]
 새벽 4시부터 끓이기 시작합니다. 사골과 잡뼈를 12시간 이상 고아낸 국물은 별다른 첨가물 없이도 진합니다. 해장이 필요한 아침, 추운 날 몸을 녹이고 싶은 저녁, 어느 때든 환영합니다. 공기밥·깍두기는 기본 제공, 수육 추가도 가능해요. 오늘 하루도 든든하게!
 
-[예시 4 — 분식]
-학교 앞 추억의 그 맛, 기억나시나요? 옛날 방식 그대로 멸치 육수에 고추장 양념을 직접 풀어 끓입니다. 매운맛 조절 가능하고, 치즈 추가시 마일드하게 즐기실 수 있어요. 순대·튀김 함께 시키시면 조합이 딱입니다. 오늘의 간식은 여기서 해결하세요!
-
 문구만 출력. 제목·번호·설명 없이.`,
 
-    order: `당신은 배달앱 음식점 운영 전문가입니다.
-아래 가게 정보를 바탕으로 배달의민족 "주문안내" 문구를 작성해주세요.
+    order: `배달의민족 "주문안내" 문구를 작성합니다.
 
-가게 정보:
-- 업종: ${storeInfo.category}
-- 대표 메뉴: ${storeInfo.mainMenu}
-- 기본 제공: ${storeInfo.includes || '공기밥, 김치'}
-- 알레르기 유발 식재료: ${storeInfo.allergy || '없음'}
-- 맵기 조절 가능: ${storeInfo.spicy || '가능'}
-- 피크타임 조리 소요 시간: ${storeInfo.peakTime || '20~30분'}
+[입력 정보]
+업종: ${storeInfo.category} / 대표 메뉴: ${storeInfo.mainMenu}
+기본 제공: ${storeInfo.includes || '공기밥, 김치'}
+알레르기 유발 식재료: ${storeInfo.allergy || '없음'}
+맵기 조절 가능: ${storeInfo.spicy || '가능'}
+피크타임 조리 소요 시간: ${storeInfo.peakTime || '20~30분'}
 
-작성 규칙:
+[작성 원칙]
 1. 항목별 글머리 기호(·) 사용
 2. 기본 제공 구성, 맵기 조절, 피크타임 안내, 알레르기 정보 포함
 3. 간결하고 명확하게
@@ -56,20 +48,74 @@ export default async function handler(req, res) {
 
 문구만 출력하세요.`,
 
-    notice: `당신은 배달앱 음식점 마케팅 전문가입니다.
-아래 정보를 바탕으로 배달의민족 "사장님공지" 문구를 작성해주세요.
+    notice: `배달의민족 "사장님공지" 문구를 작성합니다.
 
 공지 유형: ${storeInfo.noticeType}
 세부 내용: ${storeInfo.noticeDetail}
 가게 업종: ${storeInfo.category}
 
-작성 규칙:
+[작성 원칙]
 1. 첫 줄에 핵심 내용 (이모지 활용)
 2. 2~4줄 이내로 간결하게
-3. 행동 유도 문구 포함 (요청사항 기재, 기간 내 주문 등)
+3. 행동 유도 문구 포함
 4. 따뜻하고 신뢰감 있는 톤
 
-문구만 출력하세요.`
+문구만 출력하세요.`,
+
+    menuname: `배달의민족 메뉴명을 3가지 제안합니다.
+
+[입력 정보]
+현재 메뉴명: ${storeInfo.currentName}
+업종/음식 종류: ${storeInfo.category}
+조리 방식·특징: ${storeInfo.feature || '없음'}
+주요 재료: ${storeInfo.ingredient || '없음'}
+
+[작성 원칙]
+1. 15자 이내
+2. 조리법·재료 특징을 앞에 배치 (직화, 수제, 국내산, 당일 등)
+3. 검색에 걸리는 구체적 키워드 포함
+4. "맛있는", "최고의" 같은 추상적 형용사 금지
+5. 3가지 각각 다른 방향으로 제안
+
+형식:
+① [메뉴명] — [한 줄 설명]
+② [메뉴명] — [한 줄 설명]
+③ [메뉴명] — [한 줄 설명]
+
+위 형식만 출력. 다른 설명 없이.`,
+
+    menudesc: `배달의민족 메뉴 설명 문구를 작성합니다.
+
+[입력 정보]
+메뉴명: ${storeInfo.menuName}
+맛·식감: ${storeInfo.taste}
+구성·용량: ${storeInfo.compose || '없음'}
+
+[작성 원칙]
+1. 60자 이내
+2. 맛·식감 묘사 → 구성·용량 순서
+3. 숫자로 구성 명시 (g, 인분, 개 등)
+4. 먹고 싶게 만드는 구체적 묘사
+5. 구어체 OK ("강추", "드세요" 등)
+
+문구만 출력. 설명·따옴표 없이.`,
+
+    reply: `배달의민족 리뷰 답변을 작성합니다.
+
+[입력 정보]
+가게명: ${storeInfo.storeName}
+고객 리뷰: ${storeInfo.review}
+별점: ${storeInfo.rating}점
+
+[작성 원칙]
+1. 100자 이내
+2. 가게명 1회 자연스럽게 포함
+3. 별점 3점 이하: 진심 어린 사과 + 구체적 개선 약속 (변명 금지)
+4. 별점 4점 이상: 감사 + 재주문 유도
+5. 공손하되 기계적이지 않은 어조
+6. 이모지 1개 이내
+
+답변만 출력. 설명·따옴표 없이.`
   };
 
   try {
@@ -86,11 +132,8 @@ export default async function handler(req, res) {
         messages: [{ role: 'user', content: prompts[type] }]
       })
     });
-
     const data = await response.json();
-    if (data.error) {
-      return res.status(500).json({ error: data.error.message || JSON.stringify(data.error) });
-    }
+    if (data.error) return res.status(500).json({ error: data.error.message || JSON.stringify(data.error) });
     const text = data.content?.[0]?.text || '';
     res.status(200).json({ result: text });
   } catch (err) {
