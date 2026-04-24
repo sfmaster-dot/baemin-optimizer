@@ -7,6 +7,12 @@ const BADGE = {
   mid:  { bg: '#1a2535', color: '#4090e0' },
 };
 
+const CYCLE = {
+  '3m':     { label: '⚠️ 3개월 주기 교체',  color: '#e85040', bg: 'rgba(232,80,64,.1)',  border: 'rgba(232,80,64,.3)' },
+  weekly:   { label: '⚠️ 주 1회 점검',       color: '#e8a020', bg: 'rgba(232,160,32,.1)', border: 'rgba(232,160,32,.3)' },
+  adhoc:    { label: '🔄 수시 체크',          color: '#4090e0', bg: 'rgba(64,144,224,.1)', border: 'rgba(64,144,224,.3)' },
+};
+
 export default function CheckItem({ item, checked, onToggle }) {
   const [open, setOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
@@ -37,6 +43,11 @@ export default function CheckItem({ item, checked, onToggle }) {
             <div style={{ ...S.name, color: checked ? '#9aada6' : '#e8ede8' }}>
               {item.name}
               <span style={{ ...S.badge, ...BADGE[item.badge] }}>{item.badgeLabel}</span>
+              {item.cycle && CYCLE[item.cycle] && (
+                <span style={{ ...S.cycleBadge, color: CYCLE[item.cycle].color, background: CYCLE[item.cycle].bg, border: `1px solid ${CYCLE[item.cycle].border}` }}>
+                  {CYCLE[item.cycle].label}
+                </span>
+              )}
             </div>
             <div style={S.desc}>{item.desc}</div>
           </div>
@@ -121,6 +132,11 @@ const S = {
   badge: {
     fontSize: '10px', fontWeight: 700,
     padding: '2px 6px', borderRadius: '4px',
+  },
+  cycleBadge: {
+    fontSize: '10px', fontWeight: 600,
+    padding: '2px 7px', borderRadius: '10px',
+    letterSpacing: '-0.2px',
   },
   desc: { fontSize: '12px', color: '#607570', marginTop: '3px' },
   chev: { width: '18px', height: '18px', flexShrink: 0, color: '#607570', transition: 'transform .25s' },
