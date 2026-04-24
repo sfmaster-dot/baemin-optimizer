@@ -73,14 +73,16 @@ export async function loadStore(uid, storeId) {
 }
 
 // ── 매장 생성 ──
-// input: { name, mainCategoryId, businessId?, shopInShops? }
+// input: { name, categoryIds: string[], businessId?, shopInShops? }
+// - categoryIds: 최대 4개 카테고리 ID 배열 (배민 정책)
+// - 순서는 사용자가 선택한 순서 그대로 저장
 
 export async function createStore(uid, input) {
   try {
     const ref = collection(db, 'baemin', uid, 'stores');
     const docRef = await addDoc(ref, {
       name: input.name?.trim() || '이름 없는 매장',
-      mainCategoryId: input.mainCategoryId || '',
+      categoryIds: Array.isArray(input.categoryIds) ? input.categoryIds.slice(0, 4) : [],
       businessId: input.businessId?.trim() || '',
       shopInShops: Array.isArray(input.shopInShops) ? input.shopInShops : [],
       checklist: {},
@@ -96,12 +98,17 @@ export async function createStore(uid, input) {
 }
 
 // ── 매장 업데이트 (부분 merge) ──
+// patch.categoryIds가 있으면 최대 4개로 자름
 
 export async function updateStore(uid, storeId, patch) {
   try {
     const ref = doc(db, 'baemin', uid, 'stores', storeId);
+    const safePatch = { ...patch };
+    if (Array.isArray(safePatch.categoryIds)) {
+      safePatch.categoryIds = safePatch.categoryIds.slice(0, 4);
+    }
     await updateDoc(ref, {
-      ...patch,
+      ...safePatch,
       updatedAt: serverTimestamp(),
     });
     return true;

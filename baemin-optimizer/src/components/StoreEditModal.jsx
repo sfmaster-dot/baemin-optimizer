@@ -1,28 +1,47 @@
 import { useState } from 'react';
-import { BAEMIN_CATEGORIES } from '../data/categories';
+import {
+  BAEMIN_CATEGORIES,
+  MAX_CATEGORIES_PER_STORE,
+  toggleCategoryId,
+} from '../data/categories';
 
 // 매장 수정/삭제 모달
 // props:
-//   - store: { id, name, mainCategoryId, businessId }
+//   - store: { id, name, categoryIds: string[], businessId }
 //   - onSubmit(storeId, patch) => Promise<boolean>
 //   - onDelete(storeId) => Promise<boolean>
 //   - onClose(): void
-//   - canDelete: boolean  (매장이 2개 이상일 때만 true)
+//   - canDelete: boolean
 
 export default function StoreEditModal({ store, onSubmit, onDelete, onClose, canDelete }) {
+  const initialCategoryIds = Array.isArray(store?.categoryIds) ? store.categoryIds : [];
+
   const [name, setName] = useState(store?.name || '');
-  const [categoryId, setCategoryId] = useState(store?.mainCategoryId || '');
+  const [categoryIds, setCategoryIds] = useState(initialCategoryIds);
   const [businessId, setBusinessId] = useState(store?.businessId || '');
   const [submitting, setSubmitting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState('');
 
+  // 배열 비교 (순서 포함)
+  const categoriesChanged =
+    categoryIds.length !== initialCategoryIds.length ||
+    categoryIds.some((id, i) => id !== initialCategoryIds[i]);
+
   const hasChanges =
     name.trim() !== (store?.name || '') ||
-    categoryId !== (store?.mainCategoryId || '') ||
+    categoriesChanged ||
     businessId.trim() !== (store?.businessId || '');
 
-  const canSubmit = name.trim() && categoryId && hasChanges && !submitting;
+  const canSubmit =
+    name.trim() &&
+    categoryIds.length > 0 &&
+    hasChanges &&
+    !submitting;
+
+  function handleToggleCategory(id) {
+    setCategoryIds(prev => toggleCategoryId(prev, id));
+  }
 
   async function handleSave() {
     if (!canSubmit) return;
@@ -31,7 +50,7 @@ export default function StoreEditModal({ store, onSubmit, onDelete, onClose, can
     try {
       const ok = await onSubmit(store.id, {
         name: name.trim(),
-        mainCategoryId: categoryId,
+        categoryIds,
         businessId: businessId.trim(),
       });
       if (ok) {
@@ -65,7 +84,10 @@ export default function StoreEditModal({ store, onSubmit, onDelete, onClose, can
     }
   }
 
-  // 삭제 확인 화면
+  const countLabel = `${categoryIds.length}/${MAX_CATEGORIES_PER_STORE}`;
+  const atMax = categoryIds.length >= MAX_CATEGORIES_PER_STORE;
+
+  // ── 삭제 확인 화면 ──
   if (confirmDelete) {
     return (
       <div style={S.backdrop} onClick={() => !submitting && setConfirmDelete(false)}>
@@ -100,6 +122,7 @@ export default function StoreEditModal({ store, onSubmit, onDelete, onClose, can
     );
   }
 
+  // ── 편집 화면 ──
   return (
     <div style={S.backdrop} onClick={() => !submitting && onClose()}>
       <div style={S.modal} onClick={(e) => e.stopPropagation()}>
@@ -127,20 +150,31 @@ export default function StoreEditModal({ store, onSubmit, onDelete, onClose, can
 
           <div style={S.field}>
             <label style={S.label}>
-              메인 카테고리 <span style={S.req}>필수</span>
+              카테고리 <span style={S.req}>필수</span>
+              <span style={{ ...S.countBadge, ...(atMax ? S.countBadgeMax : {}) }}>
+                {countLabel}
+              </span>
+              <span style={S.hint}>최대 {MAX_CATEGORIES_PER_STORE}개 선택</span>
             </label>
             <div style={S.catGrid}>
               {BAEMIN_CATEGORIES.map(cat => {
-                const active = categoryId === cat.id;
+                const active = categoryIds.includes(cat.id);
+                const disabled = !active && atMax;
                 return (
                   <button
                     key={cat.id}
                     className='catBtn'
-                    style={{ ...S.catBtn, ...(active ? S.catBtnActive : {}) }}
-                    onClick={() => setCategoryId(cat.id)}
+                    style={{
+                      ...S.catBtn,
+                      ...(active ? S.catBtnActive : {}),
+                      ...(disabled ? S.catBtnDisabled : {}),
+                    }}
+                    onClick={() => handleToggleCategory(cat.id)}
+                    disabled={disabled}
                   >
                     <span style={S.catEmoji}>{cat.emoji}</span>
                     <span>{cat.name}</span>
+                    {active && <span style={S.catCheck}>✓</span>}
                   </button>
                 );
               })}
@@ -191,7 +225,7 @@ export default function StoreEditModal({ store, onSubmit, onDelete, onClose, can
       </div>
 
       <style>{`
-        .catBtn:hover {
+        .catBtn:not(:disabled):hover {
           background: #1c2021 !important;
           border-color: rgba(61,186,111,.4) !important;
         }
@@ -231,7 +265,7 @@ const S = {
   body: { padding: '20px 24px', overflowY: 'auto', flex: 1 },
   field: { marginBottom: '20px' },
   label: {
-    display: 'flex', alignItems: 'center', gap: '8px',
+    display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap',
     fontSize: '13px', fontWeight: 600, color: '#e8ede8', marginBottom: '8px',
   },
   req: {
@@ -242,6 +276,18 @@ const S = {
     fontSize: '10.5px', fontWeight: 700, color: '#607570',
     background: '#232829', padding: '2px 7px', borderRadius: '4px',
   },
+  countBadge: {
+    fontSize: '11px', fontWeight: 700,
+    color: '#3dba6f', background: 'rgba(61,186,111,.12)',
+    border: '1px solid rgba(61,186,111,.3)',
+    padding: '2px 8px', borderRadius: '999px',
+  },
+  countBadgeMax: {
+    color: '#F5A041', background: 'rgba(245,160,65,.12)',
+    border: '1px solid rgba(245,160,65,.3)',
+  },
+  hint: { fontSize: '11.5px', color: '#607570', fontWeight: 400, marginLeft: 'auto' },
+
   input: {
     width: '100%', padding: '11px 14px',
     background: '#181c1a', border: '1px solid #2a3030', borderRadius: '10px',
@@ -254,6 +300,7 @@ const S = {
     gap: '8px',
   },
   catBtn: {
+    position: 'relative',
     display: 'flex', alignItems: 'center', gap: '8px',
     padding: '10px 12px',
     background: '#181c1a', border: '1px solid #2a3030', borderRadius: '10px',
@@ -266,8 +313,17 @@ const S = {
     border: '1px solid #3dba6f',
     color: '#3dba6f',
     fontWeight: 600,
+    paddingRight: '28px',
+  },
+  catBtnDisabled: {
+    opacity: 0.35,
+    cursor: 'not-allowed',
   },
   catEmoji: { fontSize: '16px' },
+  catCheck: {
+    position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+    color: '#3dba6f', fontSize: '14px', fontWeight: 700,
+  },
   error: {
     padding: '10px 12px', background: 'rgba(239,91,91,.1)',
     border: '1px solid rgba(239,91,91,.3)', borderRadius: '8px',

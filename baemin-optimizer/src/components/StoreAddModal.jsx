@@ -1,20 +1,28 @@
 import { useState } from 'react';
-import { BAEMIN_CATEGORIES } from '../data/categories';
+import {
+  BAEMIN_CATEGORIES,
+  MAX_CATEGORIES_PER_STORE,
+  toggleCategoryId,
+} from '../data/categories';
 
 // 매장 추가 모달
 // props:
-//   - onSubmit({ name, mainCategoryId, businessId }) => Promise<string | null>  (생성된 storeId 반환)
-//   - onClose?: () => void        // 닫기 허용 시 (매장이 하나 이상 있을 때)
-//   - forceFirst?: boolean        // true면 닫기 버튼/배경 클릭 막음 (첫 로그인)
+//   - onSubmit({ name, categoryIds, businessId }) => Promise<string | null>
+//   - onClose?: () => void
+//   - forceFirst?: boolean
 
 export default function StoreAddModal({ onSubmit, onClose, forceFirst = false }) {
   const [name, setName] = useState('');
-  const [categoryId, setCategoryId] = useState('');
+  const [categoryIds, setCategoryIds] = useState([]);
   const [businessId, setBusinessId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const canSubmit = name.trim() && categoryId && !submitting;
+  const canSubmit = name.trim() && categoryIds.length > 0 && !submitting;
+
+  function handleToggleCategory(id) {
+    setCategoryIds(prev => toggleCategoryId(prev, id));
+  }
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -23,14 +31,13 @@ export default function StoreAddModal({ onSubmit, onClose, forceFirst = false })
     try {
       const storeId = await onSubmit({
         name: name.trim(),
-        mainCategoryId: categoryId,
+        categoryIds,
         businessId: businessId.trim(),
       });
       if (!storeId) {
         setError('매장 생성에 실패했습니다. 다시 시도해주세요.');
         setSubmitting(false);
       }
-      // 성공 시 부모 컴포넌트에서 모달을 언마운트함
     } catch (err) {
       console.error(err);
       setError('매장 생성 중 오류가 발생했습니다.');
@@ -39,9 +46,12 @@ export default function StoreAddModal({ onSubmit, onClose, forceFirst = false })
   }
 
   function handleBackdropClick() {
-    if (forceFirst) return;  // 첫 로그인 시 배경 클릭으로 못 닫음
+    if (forceFirst) return;
     onClose?.();
   }
+
+  const countLabel = `${categoryIds.length}/${MAX_CATEGORIES_PER_STORE}`;
+  const atMax = categoryIds.length >= MAX_CATEGORIES_PER_STORE;
 
   return (
     <div style={S.backdrop} onClick={handleBackdropClick}>
@@ -79,15 +89,19 @@ export default function StoreAddModal({ onSubmit, onClose, forceFirst = false })
             />
           </div>
 
-          {/* 메인 카테고리 */}
+          {/* 카테고리 (최대 4개) */}
           <div style={S.field}>
             <label style={S.label}>
-              메인 카테고리 <span style={S.req}>필수</span>
-              <span style={S.hint}>배민 대표 카테고리 1개 선택</span>
+              카테고리 <span style={S.req}>필수</span>
+              <span style={{ ...S.countBadge, ...(atMax ? S.countBadgeMax : {}) }}>
+                {countLabel}
+              </span>
+              <span style={S.hint}>최대 {MAX_CATEGORIES_PER_STORE}개 선택</span>
             </label>
             <div style={S.catGrid}>
               {BAEMIN_CATEGORIES.map(cat => {
-                const active = categoryId === cat.id;
+                const active = categoryIds.includes(cat.id);
+                const disabled = !active && atMax;
                 return (
                   <button
                     key={cat.id}
@@ -95,18 +109,21 @@ export default function StoreAddModal({ onSubmit, onClose, forceFirst = false })
                     style={{
                       ...S.catBtn,
                       ...(active ? S.catBtnActive : {}),
+                      ...(disabled ? S.catBtnDisabled : {}),
                     }}
-                    onClick={() => setCategoryId(cat.id)}
+                    onClick={() => handleToggleCategory(cat.id)}
+                    disabled={disabled}
                   >
                     <span style={S.catEmoji}>{cat.emoji}</span>
                     <span>{cat.name}</span>
+                    {active && <span style={S.catCheck}>✓</span>}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* 사업자번호 (선택) */}
+          {/* 사업자번호 */}
           <div style={S.field}>
             <label style={S.label}>
               사업자번호 <span style={S.opt}>선택</span>
@@ -133,10 +150,7 @@ export default function StoreAddModal({ onSubmit, onClose, forceFirst = false })
           )}
           <button
             className='submitBtn'
-            style={{
-              ...S.submitBtn,
-              ...((!canSubmit) ? S.submitBtnDisabled : {}),
-            }}
+            style={{ ...S.submitBtn, ...(!canSubmit ? S.submitBtnDisabled : {}) }}
             onClick={handleSubmit}
             disabled={!canSubmit}
           >
@@ -146,7 +160,7 @@ export default function StoreAddModal({ onSubmit, onClose, forceFirst = false })
       </div>
 
       <style>{`
-        .catBtn:hover {
+        .catBtn:not(:disabled):hover {
           background: #1c2021 !important;
           border-color: rgba(61,186,111,.4) !important;
         }
@@ -198,6 +212,16 @@ const S = {
     fontSize: '10.5px', fontWeight: 700, color: '#607570',
     background: '#232829', padding: '2px 7px', borderRadius: '4px',
   },
+  countBadge: {
+    fontSize: '11px', fontWeight: 700,
+    color: '#3dba6f', background: 'rgba(61,186,111,.12)',
+    border: '1px solid rgba(61,186,111,.3)',
+    padding: '2px 8px', borderRadius: '999px',
+  },
+  countBadgeMax: {
+    color: '#F5A041', background: 'rgba(245,160,65,.12)',
+    border: '1px solid rgba(245,160,65,.3)',
+  },
   hint: { fontSize: '11.5px', color: '#607570', fontWeight: 400, marginLeft: 'auto' },
 
   input: {
@@ -214,6 +238,7 @@ const S = {
     gap: '8px',
   },
   catBtn: {
+    position: 'relative',
     display: 'flex', alignItems: 'center', gap: '8px',
     padding: '10px 12px',
     background: '#181c1a', border: '1px solid #2a3030', borderRadius: '10px',
@@ -226,8 +251,17 @@ const S = {
     border: '1px solid #3dba6f',
     color: '#3dba6f',
     fontWeight: 600,
+    paddingRight: '28px',  // 체크 표시 공간
+  },
+  catBtnDisabled: {
+    opacity: 0.35,
+    cursor: 'not-allowed',
   },
   catEmoji: { fontSize: '16px' },
+  catCheck: {
+    position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+    color: '#3dba6f', fontSize: '14px', fontWeight: 700,
+  },
 
   error: {
     padding: '10px 12px', background: 'rgba(239,91,91,.1)',
