@@ -25,7 +25,7 @@ export default function LoginScreen() {
         <div style={S.features}>
           <Feature icon='✅' title='27개 항목 체크리스트' desc='가게관리·메뉴·할인·광고·리뷰까지 완전 정리' />
           <Feature icon='✨' title='AI 문구 생성 5종' desc='가게소개·공지·메뉴명·메뉴설명·리뷰답변' />
-          <Feature icon='🏪' title='다점포 지원 (준비중)' desc='사업자별·매장별 분리 관리' />
+          <Feature icon='🏪' title='다점포 지원' desc='사업자별·매장별 분리 관리' />
           <Feature icon='💾' title='내 데이터 영구 저장' desc='구글 계정으로 언제든 이어서 작업' />
         </div>
 
@@ -69,8 +69,9 @@ const S = {
   root: { fontFamily:"'Noto Sans KR',sans-serif", background:'#0f1110', color:'#e8ede8', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:'24px' },
   container: { maxWidth:'480px', width:'100%', textAlign:'center' },
 
-  logoWrap: { display:'inline-block', width:'80px', height:'80px', borderRadius:'20px', background:'white', padding:'4px', boxShadow:'0 8px 32px rgba(61,186,111,.3)', marginBottom:'24px' },
-  logo: { width:'100%', height:'100%', borderRadius:'16px', objectFit:'contain' },
+  // 흰 배경·테두리 제거 — 로고 이미지 자체 디자인 그대로 노출
+  logoWrap: { display:'inline-block', width:'80px', height:'80px', borderRadius:'20px', boxShadow:'0 8px 32px rgba(61,186,111,.3)', marginBottom:'24px', overflow:'hidden' },
+  logo: { width:'100%', height:'100%', objectFit:'contain', display:'block' },
 
   title: { fontSize:'26px', fontWeight:800, letterSpacing:'-0.5px', marginBottom:'14px', margin:0, lineHeight:1.3 },
   subtitle: { fontSize:'14px', color:'#9aada6', lineHeight:1.7, marginTop:'14px', marginBottom:'36px' },

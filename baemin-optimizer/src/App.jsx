@@ -15,6 +15,7 @@ import {
 } from './lib/stores';
 import { useStores } from './hooks/useStores';
 
+// AI 도구 — FAB 메뉴에서 사용 (상단 패널 제거됨, FAB 단일 진입점)
 const AI_TOOLS = [
   { type: 'intro',    emoji: '🏪', name: '가게소개 생성',   desc: '200~400자 · 스토리형' },
   { type: 'notice',   emoji: '📢', name: '사장님공지 생성', desc: '이벤트·휴무·신메뉴' },
@@ -198,8 +199,8 @@ export default function App() {
 
   return (
     <div style={S.root}>
-      <header style={S.header}>
-        <div style={S.logo}><img src='/baemin-logo.png' alt='배민' style={S.logoImg} /></div>
+      <header className="appHeader" style={S.header}>
+        <div className="appHeaderLogo" style={S.logo}><img src='/baemin-logo.png' alt='배민' style={S.logoImg} /></div>
 
         <div style={S.htext}>
           <StoreSwitcher
@@ -209,16 +210,16 @@ export default function App() {
             onAddClick={() => setShowAddModal(true)}
             onEditClick={() => setShowEditModal(true)}
           />
-          <div style={S.hsub}>
+          <div className="appHeaderSub" style={S.hsub}>
             <span>배민 셀프서비스 체크리스트</span>
             <span style={S.badge}>✓ 공식 가이드 2026.04 반영</span>
           </div>
         </div>
 
         <div style={S.hright}>
-          <div style={S.hprog}>
-            <div style={S.plabel}>완료 · <span style={{ ...S.grade, ...GRADE_COLOR[grade.cls] }}>{grade.label}</span></div>
-            <div style={S.pbarWrap}><div style={{ ...S.pbarFill, width: pct + '%' }} /></div>
+          <div className="appHeaderProg" style={S.hprog}>
+            <div className="appHeaderProgLabel" style={S.plabel}>완료 · <span style={{ ...S.grade, ...GRADE_COLOR[grade.cls] }}>{grade.label}</span></div>
+            <div className="appHeaderProgBar" style={S.pbarWrap}><div style={{ ...S.pbarFill, width: pct + '%' }} /></div>
             <div style={S.pcount}>
               <span style={{ color: '#3dba6f', fontWeight: 700 }}>{done}</span>
               <span style={{ color: '#607570', fontWeight: 500 }}> / {total}</span>
@@ -226,7 +227,7 @@ export default function App() {
           </div>
 
           <div style={S.profileWrap}>
-            <button style={S.profileBtn} onClick={() => setProfileMenu(o => !o)} title={user.displayName}>
+            <button className="appProfileBtn" style={S.profileBtn} onClick={() => setProfileMenu(o => !o)} title={user.displayName}>
               {user.photoURL
                 ? <img src={user.photoURL} alt='' style={S.profileImg} referrerPolicy='no-referrer' />
                 : <div style={S.profileFallback}>{(user.displayName || user.email)[0]}</div>
@@ -252,28 +253,9 @@ export default function App() {
       </header>
 
       <main style={S.main}>
-        <div style={S.aiPanel}>
-          <div style={S.aiPanelHead}>
-            <div>
-              <div style={S.aiPanelTitle}><span>✨</span> AI 문구 생성 도구</div>
-              <div style={S.aiPanelSub}>가게소개·공지사항·메뉴명·메뉴설명·리뷰답변을 업종별 프리셋으로 한 번에</div>
-            </div>
-            <span style={S.aiCount}>{AI_TOOLS.length}종</span>
-          </div>
-          <div style={S.aiGrid}>
-            {AI_TOOLS.map(t => (
-              <button key={t.type} className='aiCard' onClick={() => openAi(t.type)}>
-                <span className='aiCardEmoji'>{t.emoji}</span>
-                <div style={S.aiMeta}>
-                  <span style={S.aiName}>{t.name}</span>
-                  <span style={S.aiDesc}>{t.desc}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* 상단 AI 패널 제거 — AI 도구는 우측 하단 ✨ FAB와 각 항목 내부 ✨ 버튼으로만 진입 */}
 
-        <div style={S.tabsWrap}>
+        <div className="appTabsWrap" style={S.tabsWrap}>
           <div style={S.tabs}>
             {SECTIONS.map(sec => {
               const items = CHECKLIST.filter(i => i.section === sec.id);
@@ -359,24 +341,6 @@ export default function App() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fabFadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
-        .aiCard {
-          display: flex; align-items: center; gap: 12px;
-          padding: 14px 16px; background: #181c1a;
-          border: 1px solid #2a3030; border-radius: 12px;
-          color: #e8ede8; text-align: left; cursor: pointer;
-          transition: all 0.2s; font-family: inherit;
-        }
-        .aiCard:hover {
-          border-color: rgba(61,186,111,.5); background: #1c2021;
-          transform: translateY(-2px);
-          box-shadow: 0 6px 16px rgba(61,186,111,.15);
-        }
-        .aiCardEmoji {
-          flex-shrink: 0; width: 38px; height: 38px;
-          border-radius: 10px; background: rgba(61,186,111,.12);
-          display: flex; align-items: center; justify-content: center; font-size: 18px;
-        }
-
         .tabBtn:hover { background: #1c2021 !important; color: #e8ede8 !important; }
 
         .fabMain {
@@ -410,9 +374,33 @@ export default function App() {
           display: flex; align-items: center; justify-content: center; font-size: 14px;
         }
 
+        /* 모바일 헤더 콤팩트화 — 데스크톱 레이아웃은 그대로 유지 */
         @media (max-width: 680px) {
-          .aiCard { padding: 12px 12px; gap: 10px; }
-          .aiCardEmoji { width: 34px; height: 34px; font-size: 16px; }
+          .appHeader {
+            padding: 10px 14px !important;
+            gap: 10px !important;
+          }
+          .appHeaderLogo {
+            width: 36px !important;
+            height: 36px !important;
+            border-radius: 9px !important;
+          }
+          .appHeaderSub { display: none !important; }
+          .appHeaderProgLabel { display: none !important; }
+          .appHeaderProgBar { width: 90px !important; }
+          .appHeaderProg { min-width: 0 !important; }
+          .appProfileBtn {
+            width: 32px !important;
+            height: 32px !important;
+          }
+          .appTabsWrap {
+            top: 56px !important;
+          }
+        }
+
+        /* 매우 좁은 화면 (375px 이하) */
+        @media (max-width: 380px) {
+          .appHeaderProgBar { width: 70px !important; }
         }
       `}</style>
     </div>
@@ -426,13 +414,14 @@ const S = {
   spinner: { width: '36px', height: '36px', border: '3px solid rgba(61,186,111,.2)', borderTopColor: '#3dba6f', borderRadius: '50%', animation: 'spin 0.8s linear infinite' },
 
   firstWelcome: { textAlign: 'center', padding: '20px' },
-  welcomeLogo: { width: '80px', height: '80px', borderRadius: '20px', marginBottom: '20px', background: 'white', padding: '4px' },
+  welcomeLogo: { width: '80px', height: '80px', borderRadius: '20px', marginBottom: '20px' },
   welcomeTitle: { fontSize: '20px', fontWeight: 700, color: '#e8ede8', marginBottom: '8px' },
   welcomeSub: { fontSize: '13.5px', color: '#9aada6' },
 
   header: { background: 'rgba(15,17,16,0.92)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #2a3030', padding: '14px 32px', display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '16px', alignItems: 'center', position: 'sticky', top: 0, zIndex: 50 },
-  logo: { width: '50px', height: '50px', borderRadius: '12px', background: 'white', padding: '2px', boxShadow: '0 2px 8px rgba(0,0,0,.3)', overflow: 'hidden', flexShrink: 0 },
-  logoImg: { width: '100%', height: '100%', objectFit: 'contain', borderRadius: '10px', display: 'block' },
+  // 흰 배경·padding 제거 — 로고 이미지 자체 디자인 그대로 노출
+  logo: { width: '50px', height: '50px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,.3)', overflow: 'hidden', flexShrink: 0 },
+  logoImg: { width: '100%', height: '100%', objectFit: 'contain', display: 'block' },
   htext: { minWidth: 0, display: 'flex', flexDirection: 'column', gap: '5px' },
   hsub: { fontSize: '11.5px', color: '#9aada6', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' },
   badge: { display: 'inline-flex', alignItems: 'center', padding: '2px 8px', background: 'rgba(61,186,111,.12)', color: '#3dba6f', border: '1px solid rgba(61,186,111,.3)', borderRadius: '4px', fontSize: '10.5px', fontWeight: 600 },
@@ -456,16 +445,11 @@ const S = {
   profileDiv: { height: '1px', background: '#2a3030' },
   profileItem: { width: '100%', background: 'none', border: 'none', padding: '11px 16px', fontSize: '13px', color: '#e8ede8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', fontFamily: 'inherit' },
 
-  main: { maxWidth: '920px', margin: '0 auto', padding: '32px 24px 100px' },
-  aiPanel: { background: '#16191a', border: '1px solid #2a3030', borderRadius: '14px', padding: '20px 22px', marginBottom: '24px' },
-  aiPanelHead: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' },
-  aiPanelTitle: { fontSize: '16px', fontWeight: 700, color: '#e8ede8', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' },
-  aiPanelSub: { fontSize: '12.5px', color: '#607570' },
-  aiCount: { background: '#232829', color: '#9aada6', border: '1px solid #2a3030', borderRadius: '999px', padding: '3px 12px', fontSize: '12px', fontWeight: 600, flexShrink: 0 },
-  aiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' },
-  aiMeta: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' },
-  aiName: { fontSize: '13.5px', fontWeight: 600, color: '#e8ede8', lineHeight: 1.3 },
-  aiDesc: { fontSize: '11.5px', color: '#607570', lineHeight: 1.3 },
+  // padding-top을 32px → 24px로 축소 (AI 패널 제거 후 빈 공간 보정)
+  main: { maxWidth: '920px', margin: '0 auto', padding: '24px 24px 100px' },
+
+  // 상단 AI 패널 관련 스타일 모두 제거됨 (aiPanel, aiPanelHead, aiPanelTitle 등)
+  // AI 도구는 FAB와 각 항목 내부 ✨ 버튼으로만 진입
 
   tabsWrap: { position: 'sticky', top: '87px', zIndex: 30, background: 'rgba(15,17,16,0.95)', backdropFilter: 'blur(8px)', padding: '12px 0', marginBottom: '16px', borderBottom: '1px solid #2a3030', marginLeft: '-24px', marginRight: '-24px', paddingLeft: '24px', paddingRight: '24px' },
   tabs: { display: 'flex', gap: '6px', overflowX: 'auto', scrollbarWidth: 'none' },
