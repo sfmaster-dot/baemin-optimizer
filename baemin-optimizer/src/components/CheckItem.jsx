@@ -51,6 +51,7 @@ export default function CheckItem({ item, checked, onToggle }) {
           {/* 정보 */}
           <div style={S.info}>
             <div style={{ ...S.name, color: checked ? '#9aada6' : '#e8ede8' }}>
+              <span style={{ color: '#607570', fontWeight: 500, marginRight: '6px' }}>{item.id}.</span>
               {item.name}
               <span style={{ ...S.badge, ...BADGE[item.badge] }}>{item.badgeLabel}</span>
               {item.cycle && CYCLE[item.cycle] && (
