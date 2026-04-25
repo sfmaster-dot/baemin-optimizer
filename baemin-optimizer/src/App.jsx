@@ -129,6 +129,7 @@ export default function App() {
     : null;
 
   const activeItems = CHECKLIST.filter(i => i.section === activeTab);
+  const activeSection = SECTIONS.find(s => s.id === activeTab);
 
   async function handleAddStore(input) {
     const storeId = await addStore(input);
@@ -295,6 +296,14 @@ export default function App() {
             })}
           </div>
         </div>
+
+        {/* 섹션 intro 박스 — checklist.js의 SECTIONS[].intro 데이터 노출 */}
+        {activeSection?.intro && (
+          <div style={S.introBox}>
+            <div style={S.introTitle}>{activeSection.intro.title}</div>
+            <div style={S.introContent}>{activeSection.intro.content}</div>
+          </div>
+        )}
 
         <div style={{ minHeight: '300px' }}>
           {activeItems.map(item => (
@@ -464,6 +473,28 @@ const S = {
   tabBtnActive: { background: '#1c2021', border: '1px solid rgba(61,186,111,.3)', color: '#e8ede8' },
   tabEmoji: { fontSize: '14px' },
   tabCount: { fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '10px', transition: 'all .2s' },
+
+  // 섹션 intro 박스 (광고·서비스 명칭 변경 안내 등)
+  introBox: {
+    background: 'rgba(232,160,32,.08)',
+    border: '1px solid rgba(232,160,32,.3)',
+    borderLeft: '3px solid #e8a020',
+    borderRadius: '10px',
+    padding: '14px 16px',
+    marginBottom: '16px',
+  },
+  introTitle: {
+    fontSize: '13.5px',
+    fontWeight: 700,
+    color: '#e8a020',
+    marginBottom: '8px',
+  },
+  introContent: {
+    fontSize: '12.5px',
+    color: '#c8d4ce',
+    lineHeight: 1.7,
+    whiteSpace: 'pre-wrap',
+  },
 
   banner: { background: 'linear-gradient(135deg,#1e4a32,#0d3020)', border: '1px solid #3dba6f', borderRadius: '14px', padding: '24px', textAlign: 'center', marginTop: '24px' },
   bannerTitle: { fontSize: '20px', fontWeight: 700, color: '#3dba6f', marginBottom: '8px' },

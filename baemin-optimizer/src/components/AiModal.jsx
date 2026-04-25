@@ -210,6 +210,11 @@ export default function AiModal({ item, onClose }) {
   const showPreset = ['intro','order','notice','menuname','menudesc'].includes(type);
   const flashStyle = { background: flash ? 'rgba(61,186,111,.18)' : '#0d0f10', transition: 'background .4s' };
 
+  // 결과 출력 후 사장님 정체성 안내문 노출 여부
+  // — 창작 영역(intro·notice·menuname·menudesc)에만 노출
+  // — reply는 톤·구조가 이미 매우 구체적이라 제외, order는 항목 13에서 사용 안 함
+  const showIdentityHint = ['intro','notice','menuname','menudesc'].includes(type);
+
   return (
     <div style={S.overlay} onClick={onClose}>
       <div style={S.modal} onClick={e => e.stopPropagation()}>
@@ -303,6 +308,14 @@ export default function AiModal({ item, onClose }) {
             <div style={S.resultWrap}>
               <div style={S.resultLabel}>생성된 문구</div>
               <pre style={S.resultText}>{result}</pre>
+
+              {/* 사장님 정체성 안내문 — 창작 영역에만 자동 노출 */}
+              {showIdentityHint && (
+                <div style={S.resultHint}>
+                  💡 이 제안에서 영감과 힌트를 얻어 사장님만의 정체성을 더해주세요
+                </div>
+              )}
+
               <div style={S.resultActions}>
                 <button style={S.copyBtn} onClick={copy}>{copied ? '✓ 복사됨' : '복사하기'}</button>
                 <button style={S.regenBtn} onClick={generate}>다시 생성</button>
@@ -369,6 +382,19 @@ const S = {
   resultWrap: { marginTop:'16px', background:'#0d0f10', border:'1px solid #2a2f30', borderLeft:'3px solid #e8a020', borderRadius:'8px', padding:'14px' },
   resultLabel: { fontSize:'10px', fontWeight:700, color:'#e8a020', letterSpacing:'.07em', textTransform:'uppercase', marginBottom:'8px' },
   resultText: { fontSize:'13px', color:'#e8ede8', lineHeight:1.7, whiteSpace:'pre-wrap', margin:0, fontFamily:'inherit' },
+
+  // AI 결과 출력 후 사장님 정체성 안내문
+  resultHint: {
+    marginTop: '12px',
+    padding: '10px 12px',
+    background: 'rgba(61,186,111,.08)',
+    border: '1px solid rgba(61,186,111,.25)',
+    borderRadius: '6px',
+    fontSize: '12px',
+    color: '#7acf9a',
+    lineHeight: 1.6,
+  },
+
   resultActions: { display:'flex', gap:'8px', marginTop:'12px' },
   copyBtn: { background:'#1e4a32', border:'1px solid #3dba6f', borderRadius:'6px', padding:'7px 14px', fontSize:'12px', fontWeight:600, color:'#3dba6f', cursor:'pointer' },
   regenBtn: { background:'none', border:'1px solid #2a2f30', borderRadius:'6px', padding:'7px 14px', fontSize:'12px', color:'#9aada6', cursor:'pointer' },

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import AiModal from './AiModal';
+import { linkify } from '../utils/linkify';
 
 const BADGE = {
   must:     { bg: '#3d1810', color: '#e85040' },
@@ -58,7 +59,7 @@ export default function CheckItem({ item, checked, onToggle }) {
                 </span>
               )}
             </div>
-            <div style={S.desc}>{item.desc}</div>
+            <div style={S.desc}>{linkify(item.desc)}</div>
           </div>
 
           {/* 화살표 */}
@@ -73,7 +74,7 @@ export default function CheckItem({ item, checked, onToggle }) {
             {/* 🚨 펼치자마자 가장 먼저 보이는 빨간 경고 박스 (warnTop) */}
             {g.warnTop && (
               <div style={S.warnTop}>
-                <pre style={S.warnTopText}>{g.warnTop.content}</pre>
+                <pre style={S.warnTopText}>{linkify(g.warnTop.content)}</pre>
               </div>
             )}
 
@@ -95,12 +96,12 @@ export default function CheckItem({ item, checked, onToggle }) {
                           </svg>
                         )}
                       </span>
-                      <span style={{ color: prereqChecks[i] ? '#7acf9a' : '#e0c890', textDecoration: prereqChecks[i] ? 'line-through' : 'none' }}>{it}</span>
+                      <span style={{ color: prereqChecks[i] ? '#7acf9a' : '#e0c890', textDecoration: prereqChecks[i] ? 'line-through' : 'none' }}>{linkify(it)}</span>
                     </li>
                   ))}
                 </ul>
                 {g.prerequisiteCheck.warn && (
-                  <div style={S.prereqWarn}>{g.prerequisiteCheck.warn}</div>
+                  <div style={S.prereqWarn}>{linkify(g.prerequisiteCheck.warn)}</div>
                 )}
               </div>
             )}
@@ -113,7 +114,7 @@ export default function CheckItem({ item, checked, onToggle }) {
                   {g.points.map((p, i) => (
                     <li key={i} style={S.pt}>
                       <span style={S.arr}>›</span>
-                      <span><strong style={{ color: '#e8ede8', fontWeight: 600 }}>{p.strong}</strong> — {p.text}</span>
+                      <span><strong style={{ color: '#e8ede8', fontWeight: 600 }}>{p.strong}</strong> — {linkify(p.text)}</span>
                     </li>
                   ))}
                 </ul>
@@ -126,16 +127,16 @@ export default function CheckItem({ item, checked, onToggle }) {
                 <div style={S.gtitle}>예시</div>
                 <div style={S.ex}>
                   <div style={S.exlabel}>{g.example.label}</div>
-                  <pre style={S.extext}>{g.example.content}</pre>
+                  <pre style={S.extext}>{linkify(g.example.content)}</pre>
                 </div>
               </div>
             )}
 
             {/* 경고 */}
-            {g.warn && <div style={S.warn}>⚠ {g.warn}</div>}
+            {g.warn && <div style={S.warn}>⚠ {linkify(g.warn)}</div>}
 
             {/* 팁 */}
-            {g.tip && <div style={S.tip}>💡 {g.tip}</div>}
+            {g.tip && <div style={S.tip}>💡 {linkify(g.tip)}</div>}
 
             {/* AI 버튼 */}
             {item.aiType && (
