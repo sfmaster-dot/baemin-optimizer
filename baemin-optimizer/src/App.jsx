@@ -212,7 +212,7 @@ export default function App() {
           />
           <div className="appHeaderSub" style={S.hsub}>
             <span>배민 셀프서비스 체크리스트</span>
-            <span style={S.badge}>✓ 공식 가이드 2026.04 반영</span>
+            <span style={S.badge}>✓ 공식 가이드 2026.05 반영</span>
           </div>
         </div>
 
