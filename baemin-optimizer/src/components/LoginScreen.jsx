@@ -18,12 +18,12 @@ export default function LoginScreen() {
 
         <h1 style={S.title}>배민 가게 최적화 체크리스트</h1>
         <p style={S.subtitle}>
-          배달의민족 셀프서비스 <strong style={{color:'#3dba6f'}}>27개 필수 항목</strong>을<br/>
+          배달의민족 셀프서비스 <strong style={{color:'#3dba6f'}}>28개 필수 항목</strong>을<br/>
           빠뜨리지 않고 점검하고, AI로 문구까지 한 번에
         </p>
 
         <div style={S.features}>
-          <Feature icon='✅' title='27개 항목 체크리스트' desc='가게관리·메뉴·할인·광고·리뷰까지 완전 정리' />
+          <Feature icon='✅' title='28개 항목 체크리스트' desc='가게관리·메뉴·할인·광고·리뷰까지 완전 정리' />
           <Feature icon='✨' title='AI 문구 생성 5종' desc='가게소개·공지·메뉴명·메뉴설명·리뷰답변' />
           <Feature icon='🏪' title='다점포 지원' desc='사업자별·매장별 분리 관리' />
           <Feature icon='💾' title='내 데이터 영구 저장' desc='구글 계정으로 언제든 이어서 작업' />
@@ -35,7 +35,7 @@ export default function LoginScreen() {
         </button>
 
         <div style={S.footer}>
-          (주)단꿈 · 단꿈TV 제작 · <a href='https://danggum.net' target='_blank' rel='noreferrer' style={S.flink}>danggum.net</a>
+          by 단꿈 · <a href='https://danggum.net' target='_blank' rel='noreferrer' style={S.flink}>danggum.net</a>
         </div>
       </div>
     </div>
