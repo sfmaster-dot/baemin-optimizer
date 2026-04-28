@@ -64,6 +64,9 @@ export default function App() {
   const [fabOpen, setFabOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(1);
 
+  // 섹션 인트로 토글 — 기본 접힘, 섹션 변경 시 자동 초기화
+  const [introOpen, setIntroOpen] = useState(false);
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
@@ -114,6 +117,11 @@ export default function App() {
     }, 800);
     return () => clearTimeout(saveTimerRef.current);
   }, [checked, user, activeStoreId, storeDataLoaded]);
+
+  // 섹션 변경 시 인트로 자동 접힘
+  useEffect(() => {
+    setIntroOpen(false);
+  }, [activeTab]);
 
   const total = CHECKLIST.length;
   const done = Object.keys(checked).length;
@@ -279,11 +287,22 @@ export default function App() {
           </div>
         </div>
 
-        {/* 섹션 intro 박스 — checklist.js의 SECTIONS[].intro 데이터 노출 */}
+        {/* 섹션 intro 박스 — 클릭 토글 펼침 (기본 접힘) */}
         {activeSection?.intro && (
           <div style={S.introBox}>
-            <div style={S.introTitle}>{activeSection.intro.title}</div>
-            <div style={S.introContent}>{activeSection.intro.content}</div>
+            <div
+              style={S.introHeader}
+              onClick={() => setIntroOpen(o => !o)}
+            >
+              <div style={S.introTitle}>{activeSection.intro.title}</div>
+              <span style={{
+                ...S.introToggle,
+                transform: introOpen ? 'rotate(180deg)' : 'rotate(0)',
+              }}>▼</span>
+            </div>
+            {introOpen && (
+              <div style={S.introContent}>{activeSection.intro.content}</div>
+            )}
           </div>
         )}
 
@@ -340,6 +359,7 @@ export default function App() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fabFadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes introSlideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
 
         .tabBtn:hover { background: #1c2021 !important; color: #e8ede8 !important; }
 
@@ -458,26 +478,43 @@ const S = {
   tabEmoji: { fontSize: '14px' },
   tabCount: { fontSize: '11px', fontWeight: 700, padding: '2px 7px', borderRadius: '10px', transition: 'all .2s' },
 
-  // 섹션 intro 박스 (광고·서비스 명칭 변경 안내 등)
+  // 섹션 intro 박스 — 클릭 토글 펼침
   introBox: {
     background: 'rgba(232,160,32,.08)',
     border: '1px solid rgba(232,160,32,.3)',
     borderLeft: '3px solid #e8a020',
     borderRadius: '10px',
-    padding: '14px 16px',
     marginBottom: '16px',
+    overflow: 'hidden',
+  },
+  introHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '14px 16px',
+    cursor: 'pointer',
+    userSelect: 'none',
   },
   introTitle: {
     fontSize: '13.5px',
     fontWeight: 700,
     color: '#e8a020',
-    marginBottom: '8px',
+  },
+  introToggle: {
+    color: '#e8a020',
+    fontSize: '11px',
+    transition: 'transform 0.25s ease',
+    display: 'inline-block',
+    marginLeft: '12px',
+    flexShrink: 0,
   },
   introContent: {
     fontSize: '12.5px',
     color: '#c8d4ce',
     lineHeight: 1.7,
     whiteSpace: 'pre-wrap',
+    padding: '0 16px 14px 16px',
+    animation: 'introSlideDown 0.25s ease',
   },
 
   banner: { background: 'linear-gradient(135deg,#1e4a32,#0d3020)', border: '1px solid #3dba6f', borderRadius: '14px', padding: '24px', textAlign: 'center', marginTop: '24px' },
