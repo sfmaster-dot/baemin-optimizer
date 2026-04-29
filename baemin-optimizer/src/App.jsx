@@ -297,9 +297,15 @@ export default function App() {
         <div style={S.hright}>
           <div className="appHeaderProg" style={S.hprog}>
             <div className="appHeaderProgLabel" style={S.plabel}>완료 · <span style={{ ...S.grade, ...GRADE_COLOR[grade.cls] }}>{grade.label}</span></div>
-            <div className="appHeaderProgBar" style={S.pbarWrap}><div style={{ ...S.pbarFill, width: pct + '%' }} /></div>
+            <div className="appHeaderProgBar" style={S.pbarWrap}>
+              <div style={{
+                ...S.pbarFill,
+                width: pct + '%',
+                background: `linear-gradient(90deg, ${currentPlatformObj.color}, ${currentPlatformObj.color}dd)`,
+              }} />
+            </div>
             <div style={S.pcount}>
-              <span style={{ color: '#3dba6f', fontWeight: 700 }}>{done}</span>
+              <span style={{ color: currentPlatformObj.color, fontWeight: 700 }}>{done}</span>
               <span style={{ color: '#607570', fontWeight: 500 }}> / {total}</span>
             </div>
           </div>

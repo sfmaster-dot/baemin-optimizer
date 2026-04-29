@@ -9,8 +9,8 @@
 // 플랫폼 정의
 // ──────────────────────────────────
 export const PLATFORMS = [
-  { id: 'baemin',  label: '🛵 배민',     short: '배민',     color: '#21C387', logo: '/baemin-logo.png' },
-  { id: 'coupang', label: '🛺 쿠팡이츠', short: '쿠팡이츠', color: '#00D9B8', logo: '/coupang-logo.png' },
+  { id: 'baemin',  label: '🛵 배민',     short: '배민',     color: '#2AC1BC', logo: '/baemin-logo.png' },
+  { id: 'coupang', label: '🛺 쿠팡이츠', short: '쿠팡이츠', color: '#FF003E', logo: '/coupang-logo.png' },
 ];
 
 export const PLATFORM_IDS = PLATFORMS.map(p => p.id);
