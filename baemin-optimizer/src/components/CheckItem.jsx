@@ -17,7 +17,7 @@ const CYCLE = {
   adhoc:    { label: '🔄 수시 체크',          color: '#4090e0', bg: 'rgba(64,144,224,.1)', border: 'rgba(64,144,224,.3)' },
 };
 
-export default function CheckItem({ item, checked, onToggle }) {
+export default function CheckItem({ item, checked, onToggle, userId, storeId }) {
   const [open, setOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   // 자가검증 체크박스 로컬 상태 (저장 안 함, 펼침 동안만 유지)
@@ -149,7 +149,14 @@ export default function CheckItem({ item, checked, onToggle }) {
         )}
       </div>
 
-      {aiOpen && <AiModal item={item} onClose={() => setAiOpen(false)} />}
+      {aiOpen && (
+        <AiModal
+          item={item}
+          onClose={() => setAiOpen(false)}
+          userId={userId}
+          storeId={storeId}
+        />
+      )}
     </>
   );
 }

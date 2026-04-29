@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { saveAiCache, loadAiHistory, deleteAiHistoryItem } from '../lib/stores';
 
 // ── 업종 프리셋 데이터 (menuname의 각 필드는 배열 → 매번 랜덤 선택) ──
 const PRESETS = {
@@ -86,7 +87,7 @@ const PRESETS = {
   korean: {
     label: '🍚 한식',
     intro:    { category:['한식 전문점','집밥 한식','정통 한식당'], mainMenu:['제육볶음, 김치찌개, 비빔밥','제육덮밥, 김치찌개, 순두부찌개','비빔밥, 육개장, 불고기 정식'], feature:['직접 담근 김치, 당일 조리','사장님 직접 담근 묵은지, 집밥 정성','매일 아침 끓이는 국, 국내산 재료'], style:['1인분 주문 가능','곱빼기 추가 가능'] },
-    order:    { category:'한식', mainMenu:['제육볶음','제육덮밥, 김치찌개','비빔밥, 불고기 정식'], includes:['공기밥, 국, 김치, 반찬','공기밥, 국, 반찬 4종','공기밥, 반찬 3종, 된장국'], allergy:'없음', spicy:'가능', peakTime:['20~30분','25~30분'] },
+    order:    { category:'한식', mainMenu:['제육볶음'], includes:['공기밥, 국, 김치, 반찬','공기밥, 국, 반찬 4종','공기밥, 반찬 3종, 된장국'], allergy:'없음', spicy:'가능', peakTime:['20~30분','25~30분'] },
     notice:   { storeName:['엄마의밥상','집밥공방','한식당'], story:['사장님이 직접 담근 묵은지와 매일 아침 끓이는 국. 집밥 같은 정성으로 준비','매일 아침 조리하는 반찬과 국, 당일 조리 원칙','국내산 재료만 사용, 영양사 감수 균형 식단'], event:['리뷰 작성 시 계란후라이 추가 증정','정식 주문 시 반찬 1종 추가','점심 특가 운영 중'], featuredMenu:['제육덮밥, 김치찌개 백반','불고기 정식, 비빔밥','순두부찌개, 육개장'], extraNotice:['매주 일요일 정기 휴무','','점심 11~14시 특가'] },
     menuname: { currentName:['제육덮밥','김치찌개 정식','순두부찌개','비빔밥','불고기 정식','육개장'], category:'한식', feature:['직화, 국내산 돼지','직접 담근 묵은지','얼큰함','집밥 정성'], ingredient:['국내산 돼지고기, 직접 담근 김치','묵은지, 국산 콩','국내산 나물 7가지'] },
     menudesc: { menuName:['제육덮밥','김치찌개','순두부찌개','비빔밥'], taste:['불향 가득한, 매콤달콤한','묵은지 진한, 얼큰한 국물','부드럽고 얼큰한, 해장에 좋은','나물 향 그윽한, 고추장 매콤한'], compose:['1인분 / 공깃밥·국·김치 포함','2인분 / 공깃밥 2개·반찬 3종','1인 정식 / 밥·반찬4종·국','곱빼기 / 반찬 3종 포함'] },
@@ -138,6 +139,7 @@ const PRESETS = {
     reply:    { storeName:'도시락 가게', review:'', rating:'5' },
   },
 };
+
 const DEFAULT_FORM = {
   category:'', mainMenu:'', feature:'', style:'',
   includes:'공기밥, 김치', allergy:'', spicy:'가능', peakTime:'20~30분',
@@ -150,15 +152,80 @@ const DEFAULT_FORM = {
 // 배열이면 랜덤 pick, 문자열이면 그대로
 const pick = (v) => Array.isArray(v) ? v[Math.floor(Math.random() * v.length)] : v;
 
-export default function AiModal({ item, onClose }) {
+// ── 캐시 키 결정 함수 ──
+// menuname/menudesc는 메뉴명별로 분리, 나머지는 type 그대로
+// review는 일회성이라 null 반환 (저장 ✗)
+function getCacheKey(type, form) {
+  if (type === 'review') return null;
+  if (type === 'menuname') {
+    const name = (form.currentName || '').trim();
+    return name ? `menuname:${name}` : null;
+  }
+  if (type === 'menudesc') {
+    const name = (form.menuName || '').trim();
+    return name ? `menudesc:${name}` : null;
+  }
+  return type; // intro, notice, order
+}
+
+// ── 시간 표시 헬퍼 ──
+// 1일 이내: 'N분 전' / 'N시간 전'
+// 7일 이내: 'N일 전'
+// 그 외: '2026.04.29 14:32' 형식
+function formatTimestamp(ts) {
+  if (!ts) return '이전 버전';
+  const now = Date.now();
+  const diff = now - ts;
+  const min  = Math.floor(diff / 60000);
+  const hour = Math.floor(diff / 3600000);
+  const day  = Math.floor(diff / 86400000);
+  if (min < 1)   return '방금 전';
+  if (min < 60)  return `${min}분 전`;
+  if (hour < 24) return `${hour}시간 전`;
+  if (day < 7)   return `${day}일 전`;
+  const d = new Date(ts);
+  const yy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${yy}.${mm}.${dd} ${hh}:${mi}`;
+}
+
+export default function AiModal({ item, onClose, userId, storeId }) {
   const [form, setForm]       = useState({ ...DEFAULT_FORM });
   const [preset, setPreset]   = useState('');
   const [flash, setFlash]     = useState(0); // 필드 깜빡임 트리거
   const [result, setResult]   = useState('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied]   = useState(false);
+
+  // 히스토리 관련 state
+  const [history, setHistory]         = useState([]);  // [{ ts, content }]
+  const [historyOpen, setHistoryOpen] = useState(false);
+
   const type = item.aiType;
   const set  = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  // 저장 가능 여부 (review·미로그인 매장 ✗)
+  const canSave = !!(userId && storeId && type !== 'review');
+
+  // 현재 cacheKey 계산
+  const cacheKey = useMemo(() => getCacheKey(type, form), [type, form.currentName, form.menuName]);
+
+  // 히스토리 불러오기 — 모달 열릴 때 / cacheKey 바뀔 때
+  useEffect(() => {
+    if (!canSave || !cacheKey) {
+      setHistory([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const h = await loadAiHistory(userId, storeId, cacheKey);
+      if (!cancelled) setHistory(h);
+    })();
+    return () => { cancelled = true; };
+  }, [canSave, cacheKey, userId, storeId]);
 
   function applyPresetWithRandom(key) {
     if (!key) return;
@@ -197,7 +264,16 @@ export default function AiModal({ item, onClose }) {
         body: JSON.stringify({ type, storeInfo: form }),
       });
       const data = await res.json();
-      setResult(data.result || data.error || '오류가 발생했습니다.');
+      const out = data.result || data.error || '오류가 발생했습니다.';
+      setResult(out);
+
+      // 정상 결과일 때만 히스토리에 저장
+      if (canSave && cacheKey && data.result) {
+        await saveAiCache(userId, storeId, cacheKey, out);
+        // 저장 후 최신 히스토리 다시 불러오기
+        const h = await loadAiHistory(userId, storeId, cacheKey);
+        setHistory(h);
+      }
     } catch { setResult('서버 연결 오류가 발생했습니다.'); }
     setLoading(false);
   }
@@ -207,12 +283,29 @@ export default function AiModal({ item, onClose }) {
     setCopied(true); setTimeout(() => setCopied(false), 2000);
   }
 
+  // 이전 버전 클릭 → 결과 영역에 표시
+  function loadVersion(content) {
+    setResult(content);
+    setHistoryOpen(false);
+    // 결과 영역으로 스크롤
+    setTimeout(() => {
+      document.getElementById('ai-result-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
+  }
+
+  // 이전 버전 삭제
+  async function deleteVersion(ts, e) {
+    e.stopPropagation();
+    if (!confirm('이 버전을 삭제하시겠습니까?')) return;
+    await deleteAiHistoryItem(userId, storeId, cacheKey, ts);
+    const h = await loadAiHistory(userId, storeId, cacheKey);
+    setHistory(h);
+  }
+
   const showPreset = ['intro','order','notice','menuname','menudesc'].includes(type);
   const flashStyle = { background: flash ? 'rgba(61,186,111,.18)' : '#0d0f10', transition: 'background .4s' };
 
   // 결과 출력 후 사장님 정체성 안내문 노출 여부
-  // — 창작 영역(intro·notice·menuname·menudesc)에만 노출
-  // — reply는 톤·구조가 이미 매우 구체적이라 제외, order는 항목 13에서 사용 안 함
   const showIdentityHint = ['intro','notice','menuname','menudesc'].includes(type);
 
   return (
@@ -226,6 +319,50 @@ export default function AiModal({ item, onClose }) {
           <button style={S.closeBtn} onClick={onClose}>✕</button>
         </div>
         <div style={S.mbody}>
+
+          {/* 📜 이전 버전 — 히스토리가 있을 때만 노출 */}
+          {canSave && history.length > 0 && (
+            <div style={S.histWrap}>
+              <button
+                style={S.histToggle}
+                onClick={() => setHistoryOpen(o => !o)}
+                className='histToggle'
+              >
+                <span>📜 이전 버전 {history.length}개</span>
+                <span style={{
+                  transform: historyOpen ? 'rotate(180deg)' : 'rotate(0)',
+                  transition: 'transform .25s',
+                  fontSize: '11px',
+                }}>▼</span>
+              </button>
+              {historyOpen && (
+                <div style={S.histList}>
+                  {history.map((h, i) => (
+                    <div
+                      key={h.ts}
+                      style={S.histItem}
+                      onClick={() => loadVersion(h.content)}
+                      className='histItem'
+                    >
+                      <div style={S.histMeta}>
+                        <span style={S.histTime}>
+                          {i === 0 && <span style={S.histLatest}>최신</span>}
+                          {formatTimestamp(h.ts)}
+                        </span>
+                        <button
+                          style={S.histDelBtn}
+                          onClick={(e) => deleteVersion(h.ts, e)}
+                          title='이 버전 삭제'
+                          className='histDelBtn'
+                        >✕</button>
+                      </div>
+                      <div style={S.histPreview}>{h.content}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {showPreset && (
             <div style={S.presetWrap}>
@@ -305,11 +442,10 @@ export default function AiModal({ item, onClose }) {
           </button>
 
           {result && (
-            <div style={S.resultWrap}>
+            <div id='ai-result-anchor' style={S.resultWrap}>
               <div style={S.resultLabel}>생성된 문구</div>
               <pre style={S.resultText}>{result}</pre>
 
-              {/* 사장님 정체성 안내문 — 창작 영역에만 자동 노출 */}
               {showIdentityHint && (
                 <div style={S.resultHint}>
                   💡 이 제안에서 영감과 힌트를 얻어 사장님만의 정체성을 더해주세요
@@ -329,6 +465,9 @@ export default function AiModal({ item, onClose }) {
         .rerollBtn:hover { background: rgba(61,186,111,.12) !important; }
         .rerollBtn:hover .diceIcon { transform: rotate(180deg); }
         .rerollBtn:active { transform: scale(0.95); }
+        .histToggle:hover { background: rgba(232,160,32,.12) !important; }
+        .histItem:hover { background: rgba(232,160,32,.08) !important; border-color: rgba(232,160,32,.4) !important; }
+        .histDelBtn:hover { color: #e85040 !important; background: rgba(232,80,64,.15) !important; }
       `}</style>
     </div>
   );
@@ -367,6 +506,91 @@ const S = {
   closeBtn: { background:'none', border:'none', color:'#607570', fontSize:'18px', cursor:'pointer', padding:'2px 6px' },
   mbody: { padding:'20px' },
 
+  // 📜 히스토리 영역
+  histWrap: {
+    marginBottom: '16px',
+    background: 'rgba(232,160,32,.06)',
+    border: '1px solid rgba(232,160,32,.2)',
+    borderRadius: '8px',
+    overflow: 'hidden',
+  },
+  histToggle: {
+    width: '100%',
+    background: 'transparent',
+    border: 'none',
+    padding: '10px 14px',
+    fontSize: '12.5px',
+    fontWeight: 600,
+    color: '#e8a020',
+    cursor: 'pointer',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    fontFamily: 'inherit',
+    transition: 'background .2s',
+  },
+  histList: {
+    padding: '4px 10px 10px 10px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    maxHeight: '280px',
+    overflowY: 'auto',
+  },
+  histItem: {
+    background: '#0d0f10',
+    border: '1px solid #2a2f30',
+    borderRadius: '6px',
+    padding: '8px 10px',
+    cursor: 'pointer',
+    transition: 'all .2s',
+  },
+  histMeta: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '4px',
+  },
+  histTime: {
+    fontSize: '11px',
+    color: '#9aada6',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+  },
+  histLatest: {
+    fontSize: '9.5px',
+    fontWeight: 700,
+    color: '#3dba6f',
+    background: 'rgba(61,186,111,.15)',
+    padding: '1px 5px',
+    borderRadius: '3px',
+    letterSpacing: '.04em',
+  },
+  histDelBtn: {
+    background: 'transparent',
+    border: 'none',
+    color: '#607570',
+    fontSize: '12px',
+    cursor: 'pointer',
+    padding: '2px 6px',
+    borderRadius: '3px',
+    transition: 'all .15s',
+    fontFamily: 'inherit',
+  },
+  histPreview: {
+    fontSize: '12px',
+    color: '#c0c8c4',
+    lineHeight: 1.55,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    display: '-webkit-box',
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: 'vertical',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-all',
+  },
+
   presetWrap: { marginBottom:'18px' },
   presetLabel: { display:'block', fontSize:'12px', fontWeight:500, color:'#3dba6f', marginBottom:'8px' },
   presetRow: { display:'flex', gap:'8px' },
@@ -383,7 +607,6 @@ const S = {
   resultLabel: { fontSize:'10px', fontWeight:700, color:'#e8a020', letterSpacing:'.07em', textTransform:'uppercase', marginBottom:'8px' },
   resultText: { fontSize:'13px', color:'#e8ede8', lineHeight:1.7, whiteSpace:'pre-wrap', margin:0, fontFamily:'inherit' },
 
-  // AI 결과 출력 후 사장님 정체성 안내문
   resultHint: {
     marginTop: '12px',
     padding: '10px 12px',

@@ -140,18 +140,88 @@ export async function saveShopInShops(uid, storeId, shopInShops) {
   return updateStore(uid, storeId, { shopInShops });
 }
 
+// AI 캐시 = 버전 히스토리 (최근 10개까지 누적)
+// 구조: aiCache[cacheKey] = [{ ts, content }, ...최신순]
+//
+// cacheKey 예시:
+//   'intro'                       — 가게소개 (전체 매장 1개)
+//   'notice'                      — 사장님공지 (전체 매장 1개)
+//   'menuname:불향쭈꾸미덮밥'     — 메뉴명 (메뉴별 분리)
+//   'menudesc:불향쭈꾸미덮밥'     — 메뉴설명 (메뉴별 분리)
+//
+// 리뷰답변(review)은 일회성이라 캐시 ✗ — saveAiCache 호출하지 않음
+
+const AI_HISTORY_MAX = 10;  // 매장·항목별 최근 10개까지 보관
+
 export async function saveAiCache(uid, storeId, cacheKey, content) {
   try {
     const ref = doc(db, 'baemin', uid, 'stores', storeId);
     const snap = await getDoc(ref);
     const prev = snap.exists() ? (snap.data().aiCache || {}) : {};
+
+    // 구버전 호환: 기존 단일 문자열 캐시를 배열로 마이그레이션
+    let history = prev[cacheKey];
+    if (typeof history === 'string') {
+      history = [{ ts: Date.now() - 1, content: history }];
+    }
+    if (!Array.isArray(history)) history = [];
+
+    // 동일 content 중복 저장 방지 (가장 최신 버전과 같으면 skip)
+    if (history.length > 0 && history[0].content === content) {
+      return true;
+    }
+
+    // 최신을 맨 앞에 추가 + 최근 N개만 유지
+    const next = [{ ts: Date.now(), content }, ...history].slice(0, AI_HISTORY_MAX);
+
     await updateDoc(ref, {
-      aiCache: { ...prev, [cacheKey]: content },
+      aiCache: { ...prev, [cacheKey]: next },
       updatedAt: serverTimestamp(),
     });
     return true;
   } catch (err) {
     console.error('saveAiCache error:', err);
+    return false;
+  }
+}
+
+// AI 캐시 히스토리 불러오기 (최신순 배열)
+// 구버전 단일 문자열 캐시도 자동으로 배열로 변환해 반환
+export async function loadAiHistory(uid, storeId, cacheKey) {
+  try {
+    const ref = doc(db, 'baemin', uid, 'stores', storeId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return [];
+    const cache = snap.data().aiCache || {};
+    const raw = cache[cacheKey];
+
+    if (!raw) return [];
+    if (typeof raw === 'string') return [{ ts: 0, content: raw }];  // 구버전 호환
+    if (Array.isArray(raw)) return raw;
+    return [];
+  } catch (err) {
+    console.error('loadAiHistory error:', err);
+    return [];
+  }
+}
+
+// 특정 히스토리 버전 삭제 (timestamp 기준)
+export async function deleteAiHistoryItem(uid, storeId, cacheKey, ts) {
+  try {
+    const ref = doc(db, 'baemin', uid, 'stores', storeId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return false;
+    const cache = snap.data().aiCache || {};
+    const history = Array.isArray(cache[cacheKey]) ? cache[cacheKey] : [];
+    const next = history.filter(h => h.ts !== ts);
+
+    await updateDoc(ref, {
+      aiCache: { ...cache, [cacheKey]: next },
+      updatedAt: serverTimestamp(),
+    });
+    return true;
+  } catch (err) {
+    console.error('deleteAiHistoryItem error:', err);
     return false;
   }
 }

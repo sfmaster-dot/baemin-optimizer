@@ -378,7 +378,7 @@ export default function App() {
 
         <div style={{ minHeight: '300px' }}>
           {activeItems.map(item => (
-            <CheckItem key={item.id} item={item} checked={!!platformChecked[item.id]} onToggle={toggle} />
+            <CheckItem key={item.id} item={item} checked={!!platformChecked[item.id]} onToggle={toggle} userId={user?.uid} storeId={activeStoreId} />
           ))}
         </div>
 
@@ -405,7 +405,14 @@ export default function App() {
         </button>
       </div>
 
-      {aiModal && modalItem && <AiModal item={modalItem} onClose={() => setAiModal(null)} />}
+      {aiModal && modalItem && (
+        <AiModal
+          item={modalItem}
+          onClose={() => setAiModal(null)}
+          userId={user?.uid}
+          storeId={activeStoreId}
+        />
+      )}
 
       {showAddModal && (
         <StoreAddModal
