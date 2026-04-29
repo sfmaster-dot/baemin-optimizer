@@ -48,9 +48,7 @@ const GRADE_COLOR = {
   g4: { color: '#FFD700', filter: 'drop-shadow(0 0 6px rgba(255,215,0,.6))' },
 };
 
-// 쿠팡이츠 승인요청 토스트 발동 항목 ID
-// #1 매장소개 / #3 공지사항 (쿠팡 매장정보 섹션)
-const COUPANG_APPROVAL_IDS = [1, 3];
+// (토스트 제거됨 — 단꿈 앱 행동으로 오해 가능)
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -89,9 +87,6 @@ export default function App() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  // 토스트 (쿠팡 승인요청 알림)
-  const [toast, setToast] = useState(null);
-
   const saveTimerRef = useRef(null);
   const prevStoreIdRef = useRef(null);
 
@@ -103,13 +98,6 @@ export default function App() {
     setActiveTab(1);
     setIntroOpen(false);
   }, [currentPlatform]);
-
-  // 토스트 자동 사라짐 (3.5초)
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3500);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   useEffect(() => {
     const unsub = onAuthChange((u) => {
@@ -175,25 +163,12 @@ export default function App() {
   const grade = getGrade(pct);
 
   function toggle(id) {
-    const wasChecked = !!platformChecked[id];
-
     setChecked(c => {
       const cur = { ...(c[currentPlatform] || {}) };
       if (cur[id]) delete cur[id];
       else cur[id] = true;
       return { ...c, [currentPlatform]: cur };
     });
-
-    // 쿠팡 매장정보(#1)·공지사항(#3) 체크 시 승인요청 토스트
-    if (
-      currentPlatform === 'coupang' &&
-      !wasChecked &&
-      COUPANG_APPROVAL_IDS.includes(id)
-    ) {
-      setToast(
-        "🚨 쿠팡이츠는 매장정보 수정 후 '승인요청' 버튼을 꼭 누르셔야 반영됩니다."
-      );
-    }
   }
 
   function openAi(type) { setAiModal(type); setFabOpen(false); }
@@ -432,11 +407,6 @@ export default function App() {
         </button>
       </div>
 
-      {/* 쿠팡 승인요청 토스트 */}
-      {toast && (
-        <div style={S.toast}>{toast}</div>
-      )}
-
       {aiModal && modalItem && <AiModal item={modalItem} onClose={() => setAiModal(null)} />}
 
       {showAddModal && (
@@ -462,7 +432,6 @@ export default function App() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fabFadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes introSlideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
         .tabBtn:hover { background: #1c2021 !important; color: #e8ede8 !important; }
 
@@ -646,26 +615,4 @@ const S = {
   fabMain: {},
   fabMainOpen: { transform: 'rotate(45deg)', background: '#232829', color: '#9aada6', boxShadow: '0 4px 12px rgba(0,0,0,.3)' },
   fabMenu: { flexDirection: 'column', gap: '8px', animation: 'fabFadeIn 0.25s ease' },
-
-  // 토스트 (쿠팡 승인요청 알림)
-  toast: {
-    position: 'fixed',
-    bottom: '110px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    background: 'rgba(232,160,32,0.97)',
-    color: '#1a1a1a',
-    padding: '13px 20px',
-    borderRadius: '12px',
-    fontSize: '13px',
-    fontWeight: 600,
-    boxShadow: '0 8px 24px rgba(0,0,0,.4)',
-    zIndex: 70,
-    maxWidth: '90%',
-    width: 'max-content',
-    textAlign: 'center',
-    lineHeight: 1.5,
-    animation: 'toastIn 0.3s cubic-bezier(.4,0,.2,1)',
-    pointerEvents: 'none',
-  },
 };
