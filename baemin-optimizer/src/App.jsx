@@ -21,14 +21,12 @@ import {
 import { useStores } from './hooks/useStores';
 
 // AI 도구 — FAB 메뉴에서 사용 (상단 패널 제거됨, FAB 단일 진입점)
-// intro_en (영문 소개글) 추가 — 쿠팡이츠 영문소개 항목용
 const AI_TOOLS = [
-  { type: 'intro',    emoji: '🏪', name: '가게소개 생성',     desc: '200~400자 · 스토리형' },
-  { type: 'intro_en', emoji: '🌐', name: '영문 소개글 생성',  desc: '20자 이내 · 쿠팡이츠 전용' },
-  { type: 'notice',   emoji: '📢', name: '사장님공지 생성',   desc: '이벤트·휴무·신메뉴' },
-  { type: 'menuname', emoji: '🍽️', name: '메뉴명 SEO',       desc: '검색 키워드 최적화 3종' },
-  { type: 'menudesc', emoji: '📝', name: '메뉴설명 후킹',     desc: '60자 이내 · 후킹+구성' },
-  { type: 'reply',    emoji: '💬', name: '리뷰답변 생성',     desc: '별점 기반 톤 자동 조정' },
+  { type: 'intro',    emoji: '🏪', name: '가게소개 생성',   desc: '200~400자 · 스토리형' },
+  { type: 'notice',   emoji: '📢', name: '사장님공지 생성', desc: '이벤트·휴무·신메뉴' },
+  { type: 'menuname', emoji: '🍽️', name: '메뉴명 SEO',     desc: '검색 키워드 최적화 3종' },
+  { type: 'menudesc', emoji: '📝', name: '메뉴설명 후킹',   desc: '60자 이내 · 후킹+구성' },
+  { type: 'reply',    emoji: '💬', name: '리뷰답변 생성',   desc: '별점 기반 톤 자동 조정' },
 ];
 
 function getGrade(pct) {
