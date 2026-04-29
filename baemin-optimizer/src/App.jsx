@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { CHECKLIST, SECTIONS } from './data/checklist';
+import {
+  PLATFORMS,
+  getSections,
+  getChecklist,
+  getTotalCount,
+} from './data/checklist';
 import CheckItem from './components/CheckItem';
 import AiModal from './components/AiModal';
 import LoginScreen from './components/LoginScreen';
@@ -16,12 +21,14 @@ import {
 import { useStores } from './hooks/useStores';
 
 // AI 도구 — FAB 메뉴에서 사용 (상단 패널 제거됨, FAB 단일 진입점)
+// intro_en (영문 소개글) 추가 — 쿠팡이츠 영문소개 항목용
 const AI_TOOLS = [
-  { type: 'intro',    emoji: '🏪', name: '가게소개 생성',   desc: '200~400자 · 스토리형' },
-  { type: 'notice',   emoji: '📢', name: '사장님공지 생성', desc: '이벤트·휴무·신메뉴' },
-  { type: 'menuname', emoji: '🍽️', name: '메뉴명 SEO',     desc: '검색 키워드 최적화 3종' },
-  { type: 'menudesc', emoji: '📝', name: '메뉴설명 후킹',   desc: '60자 이내 · 후킹+구성' },
-  { type: 'reply',    emoji: '💬', name: '리뷰답변 생성',   desc: '별점 기반 톤 자동 조정' },
+  { type: 'intro',    emoji: '🏪', name: '가게소개 생성',     desc: '200~400자 · 스토리형' },
+  { type: 'intro_en', emoji: '🌐', name: '영문 소개글 생성',  desc: '20자 이내 · 쿠팡이츠 전용' },
+  { type: 'notice',   emoji: '📢', name: '사장님공지 생성',   desc: '이벤트·휴무·신메뉴' },
+  { type: 'menuname', emoji: '🍽️', name: '메뉴명 SEO',       desc: '검색 키워드 최적화 3종' },
+  { type: 'menudesc', emoji: '📝', name: '메뉴설명 후킹',     desc: '60자 이내 · 후킹+구성' },
+  { type: 'reply',    emoji: '💬', name: '리뷰답변 생성',     desc: '별점 기반 톤 자동 조정' },
 ];
 
 function getGrade(pct) {
@@ -41,6 +48,10 @@ const GRADE_COLOR = {
   g4: { color: '#FFD700', filter: 'drop-shadow(0 0 6px rgba(255,215,0,.6))' },
 };
 
+// 쿠팡이츠 승인요청 토스트 발동 항목 ID
+// #1 매장소개 / #3 공지사항 (쿠팡 매장정보 섹션)
+const COUPANG_APPROVAL_IDS = [1, 3];
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -57,28 +68,55 @@ export default function App() {
     patchLocalStore,
   } = useStores(user);
 
-  const [checked, setChecked] = useState({});
+  // 플랫폼 state — localStorage 마지막 본 플랫폼 기억
+  const [currentPlatform, setCurrentPlatform] = useState(() => {
+    if (typeof window === 'undefined') return 'baemin';
+    const saved = localStorage.getItem('dgm_platform');
+    return PLATFORMS.find(p => p.id === saved) ? saved : 'baemin';
+  });
+
+  // checked 구조: { baemin: {1:true,2:true}, coupang: {1:true} }
+  const [checked, setChecked] = useState({ baemin: {}, coupang: {} });
   const [storeDataLoaded, setStoreDataLoaded] = useState(false);
 
   const [aiModal, setAiModal] = useState(null);
   const [fabOpen, setFabOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(1);
 
-  // 섹션 인트로 토글 — 기본 접힘, 섹션 변경 시 자동 초기화
+  // 섹션 인트로 토글 — 기본 접힘, 섹션·플랫폼 변경 시 자동 초기화
   const [introOpen, setIntroOpen] = useState(false);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
+  // 토스트 (쿠팡 승인요청 알림)
+  const [toast, setToast] = useState(null);
+
   const saveTimerRef = useRef(null);
   const prevStoreIdRef = useRef(null);
+
+  // 플랫폼 변경 시: localStorage 저장 + activeTab 리셋 + intro 접힘
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('dgm_platform', currentPlatform);
+    }
+    setActiveTab(1);
+    setIntroOpen(false);
+  }, [currentPlatform]);
+
+  // 토스트 자동 사라짐 (3.5초)
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3500);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   useEffect(() => {
     const unsub = onAuthChange((u) => {
       setUser(u);
       setAuthLoading(false);
       if (!u) {
-        setChecked({});
+        setChecked({ baemin: {}, coupang: {} });
         setStoreDataLoaded(false);
       }
     });
@@ -87,7 +125,7 @@ export default function App() {
 
   useEffect(() => {
     if (!user || !activeStoreId) {
-      setChecked({});
+      setChecked({ baemin: {}, coupang: {} });
       setStoreDataLoaded(false);
       prevStoreIdRef.current = null;
       return;
@@ -101,7 +139,8 @@ export default function App() {
     (async () => {
       const data = await loadStore(user.uid, activeStoreId);
       if (cancelled) return;
-      setChecked(data?.checklist || {});
+      // 새 구조: checklists 맵 필드 / 신규 사용자 기준 fallback
+      setChecked(data?.checklists || { baemin: {}, coupang: {} });
       prevStoreIdRef.current = activeStoreId;
       setStoreDataLoaded(true);
     })();
@@ -113,6 +152,7 @@ export default function App() {
     if (!user || !activeStoreId || !storeDataLoaded) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
+      // checked = { baemin: {...}, coupang: {...} } 구조 그대로 저장
       saveStoreChecklist(user.uid, activeStoreId, checked);
     }, 800);
     return () => clearTimeout(saveTimerRef.current);
@@ -123,22 +163,46 @@ export default function App() {
     setIntroOpen(false);
   }, [activeTab]);
 
-  const total = CHECKLIST.length;
-  const done = Object.keys(checked).length;
-  const pct = Math.round((done / total) * 100);
+  // 현재 플랫폼 데이터
+  const sections = getSections(currentPlatform);
+  const checklist = getChecklist(currentPlatform);
+  const platformChecked = checked[currentPlatform] || {};
+
+  const total = checklist.length;
+  const done = Object.keys(platformChecked).length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
   const grade = getGrade(pct);
 
   function toggle(id) {
-    setChecked(c => { const n = { ...c }; if (n[id]) delete n[id]; else n[id] = true; return n; });
+    const wasChecked = !!platformChecked[id];
+
+    setChecked(c => {
+      const cur = { ...(c[currentPlatform] || {}) };
+      if (cur[id]) delete cur[id];
+      else cur[id] = true;
+      return { ...c, [currentPlatform]: cur };
+    });
+
+    // 쿠팡 매장정보(#1)·공지사항(#3) 체크 시 승인요청 토스트
+    if (
+      currentPlatform === 'coupang' &&
+      !wasChecked &&
+      COUPANG_APPROVAL_IDS.includes(id)
+    ) {
+      setToast(
+        "🚨 쿠팡이츠는 매장정보 수정 후 '승인요청' 버튼을 꼭 누르셔야 반영됩니다."
+      );
+    }
   }
+
   function openAi(type) { setAiModal(type); setFabOpen(false); }
 
   const modalItem = aiModal
     ? (() => { const t = AI_TOOLS.find(x => x.type === aiModal); return t ? { aiType: t.type, aiLabel: t.name } : null; })()
     : null;
 
-  const activeItems = CHECKLIST.filter(i => i.section === activeTab);
-  const activeSection = SECTIONS.find(s => s.id === activeTab);
+  const activeItems = checklist.filter(i => i.section === activeTab);
+  const activeSection = sections.find(s => s.id === activeTab);
 
   async function handleAddStore(input) {
     const storeId = await addStore(input);
@@ -219,8 +283,34 @@ export default function App() {
             onEditClick={() => setShowEditModal(true)}
           />
           <div className="appHeaderSub" style={S.hsub}>
-            <span>배민 셀프서비스 체크리스트</span>
-            <span style={S.badge}>✓ 공식 가이드 2026.05 반영</span>
+            {/* 플랫폼 토글 탭 — 한 클릭 전환 */}
+            <div style={S.platformTabs}>
+              {PLATFORMS.map(p => {
+                const isActive = currentPlatform === p.id;
+                const pDone = Object.keys(checked[p.id] || {}).length;
+                const pTotal = getTotalCount(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    className="platformTab"
+                    onClick={() => setCurrentPlatform(p.id)}
+                    style={{
+                      ...S.platformTab,
+                      ...(isActive ? {
+                        background: `${p.color}20`,
+                        color: p.color,
+                        borderColor: `${p.color}66`,
+                        fontWeight: 700,
+                      } : {}),
+                    }}
+                  >
+                    {p.label}
+                    <span style={S.platformCount}>{pDone}/{pTotal}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <span style={S.badge}>✓ 공식 2026.05</span>
           </div>
         </div>
 
@@ -265,9 +355,9 @@ export default function App() {
 
         <div className="appTabsWrap" style={S.tabsWrap}>
           <div style={S.tabs}>
-            {SECTIONS.map(sec => {
-              const items = CHECKLIST.filter(i => i.section === sec.id);
-              const secDone = items.filter(i => checked[i.id]).length;
+            {sections.map(sec => {
+              const items = checklist.filter(i => i.section === sec.id);
+              const secDone = items.filter(i => platformChecked[i.id]).length;
               const isActive = activeTab === sec.id;
               const isDone = secDone === items.length && items.length > 0;
               return (
@@ -308,14 +398,14 @@ export default function App() {
 
         <div style={{ minHeight: '300px' }}>
           {activeItems.map(item => (
-            <CheckItem key={item.id} item={item} checked={!!checked[item.id]} onToggle={toggle} />
+            <CheckItem key={item.id} item={item} checked={!!platformChecked[item.id]} onToggle={toggle} />
           ))}
         </div>
 
-        {done === total && (
+        {done === total && total > 0 && (
           <div style={S.banner}>
-            <div style={S.bannerTitle}>🏆 최적화 완료!</div>
-            <div style={S.bannerSub}>배민 최적화 {total}개 항목을 모두 확인했습니다.<br />이제 주문이 들어올 모든 준비가 됐습니다.</div>
+            <div style={S.bannerTitle}>🏆 {currentPlatform === 'baemin' ? '배민' : '쿠팡이츠'} 최적화 완료!</div>
+            <div style={S.bannerSub}>{total}개 항목을 모두 확인했습니다.<br />이제 주문이 들어올 모든 준비가 됐습니다.</div>
           </div>
         )}
       </main>
@@ -334,6 +424,11 @@ export default function App() {
           {fabOpen ? '✕' : '✨'}
         </button>
       </div>
+
+      {/* 쿠팡 승인요청 토스트 */}
+      {toast && (
+        <div style={S.toast}>{toast}</div>
+      )}
 
       {aiModal && modalItem && <AiModal item={modalItem} onClose={() => setAiModal(null)} />}
 
@@ -360,8 +455,11 @@ export default function App() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fabFadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes introSlideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
         .tabBtn:hover { background: #1c2021 !important; color: #e8ede8 !important; }
+
+        .platformTab:hover { background: #1c2021 !important; }
 
         .fabMain {
           width: 60px; height: 60px; border-radius: 50%;
@@ -405,7 +503,6 @@ export default function App() {
             height: 36px !important;
             border-radius: 9px !important;
           }
-          .appHeaderSub { display: none !important; }
           .appHeaderProgLabel { display: none !important; }
           .appHeaderProgBar { width: 90px !important; }
           .appHeaderProg { min-width: 0 !important; }
@@ -414,7 +511,7 @@ export default function App() {
             height: 32px !important;
           }
           .appTabsWrap {
-            top: 56px !important;
+            top: 90px !important;
           }
         }
 
@@ -439,12 +536,33 @@ const S = {
   welcomeSub: { fontSize: '13.5px', color: '#9aada6' },
 
   header: { background: 'rgba(15,17,16,0.92)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #2a3030', padding: '14px 32px', display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '16px', alignItems: 'center', position: 'sticky', top: 0, zIndex: 50 },
-  // 흰 배경·padding 제거 — 로고 이미지 자체 디자인 그대로 노출
   logo: { width: '50px', height: '50px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,.3)', overflow: 'hidden', flexShrink: 0 },
   logoImg: { width: '100%', height: '100%', objectFit: 'contain', display: 'block' },
   htext: { minWidth: 0, display: 'flex', flexDirection: 'column', gap: '5px' },
   hsub: { fontSize: '11.5px', color: '#9aada6', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' },
   badge: { display: 'inline-flex', alignItems: 'center', padding: '2px 8px', background: 'rgba(61,186,111,.12)', color: '#3dba6f', border: '1px solid rgba(61,186,111,.3)', borderRadius: '4px', fontSize: '10.5px', fontWeight: 600 },
+
+  // 플랫폼 토글 탭 — 헤더 sub 줄에 노출
+  platformTabs: { display: 'flex', gap: '6px' },
+  platformTab: {
+    display: 'inline-flex', alignItems: 'center', gap: '6px',
+    padding: '4px 10px',
+    background: '#181c1a',
+    border: '1px solid #2a3030',
+    borderRadius: '999px',
+    color: '#9aada6',
+    fontSize: '11.5px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    transition: 'all .2s',
+  },
+  platformCount: {
+    fontSize: '10.5px',
+    opacity: 0.85,
+    fontWeight: 700,
+  },
+
   hright: { display: 'flex', alignItems: 'center', gap: '16px' },
   hprog: { textAlign: 'right', minWidth: '130px' },
   plabel: { fontSize: '11px', color: '#607570', marginBottom: '5px' },
@@ -465,13 +583,9 @@ const S = {
   profileDiv: { height: '1px', background: '#2a3030' },
   profileItem: { width: '100%', background: 'none', border: 'none', padding: '11px 16px', fontSize: '13px', color: '#e8ede8', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left', fontFamily: 'inherit' },
 
-  // padding-top을 32px → 24px로 축소 (AI 패널 제거 후 빈 공간 보정)
   main: { maxWidth: '920px', margin: '0 auto', padding: '24px 24px 100px' },
 
-  // 상단 AI 패널 관련 스타일 모두 제거됨 (aiPanel, aiPanelHead, aiPanelTitle 등)
-  // AI 도구는 FAB와 각 항목 내부 ✨ 버튼으로만 진입
-
-  tabsWrap: { position: 'sticky', top: '87px', zIndex: 30, background: 'rgba(15,17,16,0.95)', backdropFilter: 'blur(8px)', padding: '12px 0', marginBottom: '16px', borderBottom: '1px solid #2a3030', marginLeft: '-24px', marginRight: '-24px', paddingLeft: '24px', paddingRight: '24px' },
+  tabsWrap: { position: 'sticky', top: '94px', zIndex: 30, background: 'rgba(15,17,16,0.95)', backdropFilter: 'blur(8px)', padding: '12px 0', marginBottom: '16px', borderBottom: '1px solid #2a3030', marginLeft: '-24px', marginRight: '-24px', paddingLeft: '24px', paddingRight: '24px' },
   tabs: { display: 'flex', gap: '6px', overflowX: 'auto', scrollbarWidth: 'none' },
   tabBtn: { display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 14px', background: 'transparent', border: '1px solid transparent', borderRadius: '10px', color: '#607570', fontSize: '13px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all .2s', fontFamily: 'inherit' },
   tabBtnActive: { background: '#1c2021', border: '1px solid rgba(61,186,111,.3)', color: '#e8ede8' },
@@ -525,4 +639,26 @@ const S = {
   fabMain: {},
   fabMainOpen: { transform: 'rotate(45deg)', background: '#232829', color: '#9aada6', boxShadow: '0 4px 12px rgba(0,0,0,.3)' },
   fabMenu: { flexDirection: 'column', gap: '8px', animation: 'fabFadeIn 0.25s ease' },
+
+  // 토스트 (쿠팡 승인요청 알림)
+  toast: {
+    position: 'fixed',
+    bottom: '110px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    background: 'rgba(232,160,32,0.97)',
+    color: '#1a1a1a',
+    padding: '13px 20px',
+    borderRadius: '12px',
+    fontSize: '13px',
+    fontWeight: 600,
+    boxShadow: '0 8px 24px rgba(0,0,0,.4)',
+    zIndex: 70,
+    maxWidth: '90%',
+    width: 'max-content',
+    textAlign: 'center',
+    lineHeight: 1.5,
+    animation: 'toastIn 0.3s cubic-bezier(.4,0,.2,1)',
+    pointerEvents: 'none',
+  },
 };
