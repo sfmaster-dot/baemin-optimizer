@@ -167,6 +167,7 @@ export default function App() {
   const sections = getSections(currentPlatform);
   const checklist = getChecklist(currentPlatform);
   const platformChecked = checked[currentPlatform] || {};
+  const currentPlatformObj = PLATFORMS.find(p => p.id === currentPlatform) || PLATFORMS[0];
 
   const total = checklist.length;
   const done = Object.keys(platformChecked).length;
@@ -272,7 +273,13 @@ export default function App() {
   return (
     <div style={S.root}>
       <header className="appHeader" style={S.header}>
-        <div className="appHeaderLogo" style={S.logo}><img src='/baemin-logo.png' alt='배민' style={S.logoImg} /></div>
+        <div className="appHeaderLogo" style={S.logo}>
+          <img
+            src={currentPlatformObj.logo}
+            alt={currentPlatformObj.short}
+            style={S.logoImg}
+          />
+        </div>
 
         <div style={S.htext}>
           <StoreSwitcher
