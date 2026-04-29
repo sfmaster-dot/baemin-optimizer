@@ -71,7 +71,19 @@ export async function loadStore(uid, storeId) {
   try {
     const ref = doc(db, 'baemin', uid, 'stores', storeId);
     const snap = await getDoc(ref);
-    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+    if (!snap.exists()) return null;
+    const data = snap.data();
+
+    // 마이그레이션: 구버전 단일 'checklist' 필드를 'checklists.baemin' 으로 자동 이전
+    // 신규 매장은 checklists.{baemin,coupang} 구조
+    if (!data.checklists && data.checklist && typeof data.checklist === 'object') {
+      data.checklists = { baemin: data.checklist, coupang: {} };
+    }
+    if (!data.checklists) {
+      data.checklists = { baemin: {}, coupang: {} };
+    }
+
+    return { id: snap.id, ...data };
   } catch (err) {
     console.error('loadStore error:', err);
     return null;
@@ -89,7 +101,7 @@ export async function createStore(uid, input) {
       businessId: input.businessId?.trim() || '',
       businessGroupName: input.businessGroupName?.trim() || '',
       shopInShops: Array.isArray(input.shopInShops) ? input.shopInShops : [],
-      checklist: {},
+      checklists: { baemin: {}, coupang: {} },  // ← 신규 구조: 플랫폼별 맵
       aiCache: {},
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -119,8 +131,9 @@ export async function updateStore(uid, storeId, patch) {
   }
 }
 
-export async function saveStoreChecklist(uid, storeId, checklist) {
-  return updateStore(uid, storeId, { checklist });
+// ← 인자 이름을 명확히 'checklists' 로 (플랫폼별 맵 구조 그대로 저장)
+export async function saveStoreChecklist(uid, storeId, checklists) {
+  return updateStore(uid, storeId, { checklists });
 }
 
 export async function saveShopInShops(uid, storeId, shopInShops) {
