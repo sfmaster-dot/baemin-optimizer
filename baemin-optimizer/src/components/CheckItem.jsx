@@ -115,7 +115,7 @@ export default function CheckItem({ item, checked, onToggle, userId, storeId }) 
                   {g.points.map((p, i) => (
                     <li key={i} style={S.pt}>
                       <span style={S.arr}>›</span>
-                      <span><strong style={{ color: '#e8ede8', fontWeight: 600 }}>{p.strong}</strong> — {linkify(p.text)}</span>
+                      <span><strong style={{ color: '#e8ede8', fontWeight: 600 }}>{p.strong}</strong>{p.text && <> — {linkify(p.text)}</>}</span>
                     </li>
                   ))}
                 </ul>
