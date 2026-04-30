@@ -255,13 +255,15 @@ export default function App() {
         </div>
 
         <div style={S.htext}>
-          <StoreSwitcher
-            stores={stores}
-            activeStoreId={activeStoreId}
-            onSwitch={switchStore}
-            onAddClick={() => setShowAddModal(true)}
-            onEditClick={() => setShowEditModal(true)}
-          />
+          <div className="appHeaderRow1" style={S.hrow1}>
+            <StoreSwitcher
+              stores={stores}
+              activeStoreId={activeStoreId}
+              onSwitch={switchStore}
+              onAddClick={() => setShowAddModal(true)}
+              onEditClick={() => setShowEditModal(true)}
+            />
+          </div>
           <div className="appHeaderSub" style={S.hsub}>
             {/* 플랫폼 토글 탭 — 한 클릭 전환 */}
             <div style={S.platformTabs}>
@@ -290,11 +292,10 @@ export default function App() {
                 );
               })}
             </div>
-            <span style={S.badge}>✓ 공식 2026.05</span>
           </div>
         </div>
 
-        <div style={S.hright}>
+        <div className="appHeaderRight" style={S.hright}>
           <div className="appHeaderProg" style={S.hprog}>
             <div className="appHeaderProgLabel" style={S.plabel}>완료 · <span style={{ ...S.grade, ...GRADE_COLOR[grade.cls] }}>{grade.label}</span></div>
             <div className="appHeaderProgBar" style={S.pbarWrap}>
@@ -307,6 +308,7 @@ export default function App() {
             <div style={S.pcount}>
               <span style={{ color: currentPlatformObj.color, fontWeight: 700 }}>{done}</span>
               <span style={{ color: '#607570', fontWeight: 500 }}> / {total}</span>
+              <span className="appHeaderBadge" style={S.badgeInline}>✓ 공식 2026.05</span>
             </div>
           </div>
 
@@ -479,32 +481,92 @@ export default function App() {
           display: flex; align-items: center; justify-content: center; font-size: 14px;
         }
 
-        /* 모바일 헤더 콤팩트화 — 데스크톱 레이아웃은 그대로 유지 */
+        /* 모바일 헤더 — 2단 레이아웃 (PC 그대로 유지) */
         @media (max-width: 680px) {
           .appHeader {
             padding: 10px 14px !important;
-            gap: 10px !important;
+            gap: 8px 10px !important;
+            grid-template-columns: auto 1fr auto !important;
+            grid-template-areas:
+              "logo store profile"
+              "platforms platforms platforms"
+              "progress progress progress" !important;
           }
           .appHeaderLogo {
+            grid-area: logo !important;
             width: 36px !important;
             height: 36px !important;
             border-radius: 9px !important;
           }
+          .appHeader > div:nth-child(2) {
+            /* htext 영역을 store 영역으로 분리 */
+            grid-area: store !important;
+            min-width: 0 !important;
+            display: contents !important;
+          }
+          .appHeaderRow1 {
+            grid-area: store !important;
+            min-width: 0 !important;
+          }
+          .appHeaderSub {
+            grid-area: platforms !important;
+            margin-top: 2px !important;
+          }
+          .appHeaderRight {
+            grid-area: progress !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            justify-content: flex-end !important;
+          }
+          .appHeaderProg {
+            flex: 1 !important;
+            min-width: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            text-align: left !important;
+          }
           .appHeaderProgLabel { display: none !important; }
-          .appHeaderProgBar { width: 90px !important; }
-          .appHeaderProg { min-width: 0 !important; }
+          .appHeaderProgBar {
+            flex: 1 !important;
+            width: auto !important;
+            margin-left: 0 !important;
+            margin-bottom: 0 !important;
+          }
+          .appHeaderProg > div:last-child {
+            white-space: nowrap !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+          }
           .appProfileBtn {
+            grid-area: profile !important;
             width: 32px !important;
             height: 32px !important;
+            justify-self: end !important;
+          }
+          .appProfileBtn ~ * {
+            /* 프로필 메뉴는 그대로 유지 */
           }
           .appTabsWrap {
-            top: 90px !important;
+            top: 122px !important;
+          }
+          /* 매장 박스 다이어트 */
+          .storeSwitcherBtn {
+            padding: 6px 10px !important;
+            font-size: 12.5px !important;
+          }
+          /* 플랫폼 토글 padding 압축 */
+          .platformTab {
+            padding: 3px 8px !important;
+            font-size: 11px !important;
           }
         }
 
         /* 매우 좁은 화면 (375px 이하) */
         @media (max-width: 380px) {
-          .appHeaderProgBar { width: 70px !important; }
+          .appHeaderBadge { font-size: 9.5px !important; padding: 1px 5px !important; }
         }
       `}</style>
     </div>
@@ -526,8 +588,10 @@ const S = {
   logo: { width: '50px', height: '50px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,.3)', overflow: 'hidden', flexShrink: 0 },
   logoImg: { width: '100%', height: '100%', objectFit: 'contain', display: 'block' },
   htext: { minWidth: 0, display: 'flex', flexDirection: 'column', gap: '5px' },
+  hrow1: { display: 'flex', alignItems: 'center', minWidth: 0 },
   hsub: { fontSize: '11.5px', color: '#9aada6', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' },
   badge: { display: 'inline-flex', alignItems: 'center', padding: '2px 8px', background: 'rgba(61,186,111,.12)', color: '#3dba6f', border: '1px solid rgba(61,186,111,.3)', borderRadius: '4px', fontSize: '10.5px', fontWeight: 600 },
+  badgeInline: { display: 'inline-flex', alignItems: 'center', padding: '2px 8px', background: 'rgba(61,186,111,.12)', color: '#3dba6f', border: '1px solid rgba(61,186,111,.3)', borderRadius: '4px', fontSize: '10.5px', fontWeight: 600, marginLeft: '8px' },
 
   // 플랫폼 토글 탭 — 헤더 sub 줄에 노출
   platformTabs: { display: 'flex', gap: '6px' },
