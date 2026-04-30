@@ -219,7 +219,7 @@ const BAEMIN_CHECKLIST = [
     }},
 
   { id:6, section:1, name:'가게배달 배달팁 (기본·추가)', badge:'must', badgeLabel:'필수', cycle:'adhoc',
-    desc:'배민배달 → 상생요금제 / 가게배달 → 사장님이 직접 설정 가능 (기본 + 추가 배달팁)',
+    desc:'배민배달 → 상생요금제에 따른 지역별 배달팁 / 가게배달 → 사장님이 직접 설정 가능 (기본 + 추가 배달팁)',
     guide:{
       points:[
         {strong:'배민배달 vs 가게배달 — 사장님이 손볼 영역은 가게배달뿐',
