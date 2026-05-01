@@ -149,7 +149,7 @@ export async function saveShopInShops(uid, storeId, shopInShops) {
 //   'menuname:불향쭈꾸미덮밥'     — 메뉴명 (메뉴별 분리)
 //   'menudesc:불향쭈꾸미덮밥'     — 메뉴설명 (메뉴별 분리)
 //
-// 리뷰답변(review)은 일회성이라 캐시 ✗ — saveAiCache 호출하지 않음
+// 리뷰답변(review)은 일회성이라 캐시 ❌ — saveAiCache 호출하지 않음
 
 const AI_HISTORY_MAX = 10;  // 매장·항목별 최근 10개까지 보관
 

@@ -154,7 +154,7 @@ const pick = (v) => Array.isArray(v) ? v[Math.floor(Math.random() * v.length)] :
 
 // ── 캐시 키 결정 함수 ──
 // menuname/menudesc는 메뉴명별로 분리, 나머지는 type 그대로
-// review는 일회성이라 null 반환 (저장 ✗)
+// review는 일회성이라 null 반환 (저장 ❌)
 function getCacheKey(type, form) {
   if (type === 'review') return null;
   if (type === 'menuname') {
@@ -207,7 +207,7 @@ export default function AiModal({ item, onClose, userId, storeId }) {
   const type = item.aiType;
   const set  = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  // 저장 가능 여부 (review·미로그인 매장 ✗)
+  // 저장 가능 여부 (review·미로그인 매장 ❌)
   const canSave = !!(userId && storeId && type !== 'review');
 
   // 현재 cacheKey 계산
