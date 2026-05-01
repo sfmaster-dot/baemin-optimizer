@@ -66,13 +66,16 @@ export default function App() {
 
   // 플랫폼 state — localStorage 마지막 본 플랫폼 기억
   const [currentPlatform, setCurrentPlatform] = useState(() => {
-    if (typeof window === 'undefined') return 'baemin';
+    if (typeof window === 'undefined') return PLATFORMS[0].id;
     const saved = localStorage.getItem('dgm_platform');
-    return PLATFORMS.find(p => p.id === saved) ? saved : 'baemin';
+    return PLATFORMS.find(p => p.id === saved) ? saved : PLATFORMS[0].id;
   });
 
-  // checked 구조: { baemin: {1:true,2:true}, coupang: {1:true} }
-  const [checked, setChecked] = useState({ baemin: {}, coupang: {} });
+  // 동적 초기 상태 — PLATFORMS 배열 변경 시 자동 반영 (요기요·땡겨요 추가 등)
+  const emptyChecked = () => Object.fromEntries(PLATFORMS.map(p => [p.id, {}]));
+
+  // checked 구조: { baemin: {1:true,2:true}, coupang: {1:true}, ... } (PLATFORMS 자동 따라감)
+  const [checked, setChecked] = useState(emptyChecked());
   const [storeDataLoaded, setStoreDataLoaded] = useState(false);
 
   const [aiModal, setAiModal] = useState(null);
@@ -102,7 +105,7 @@ export default function App() {
       setUser(u);
       setAuthLoading(false);
       if (!u) {
-        setChecked({ baemin: {}, coupang: {} });
+        setChecked(emptyChecked());
         setStoreDataLoaded(false);
       }
     });
@@ -111,7 +114,7 @@ export default function App() {
 
   useEffect(() => {
     if (!user || !activeStoreId) {
-      setChecked({ baemin: {}, coupang: {} });
+      setChecked(emptyChecked());
       setStoreDataLoaded(false);
       prevStoreIdRef.current = null;
       return;
@@ -126,7 +129,7 @@ export default function App() {
       const data = await loadStore(user.uid, activeStoreId);
       if (cancelled) return;
       // 새 구조: checklists 맵 필드 / 신규 사용자 기준 fallback
-      setChecked(data?.checklists || { baemin: {}, coupang: {} });
+      setChecked(data?.checklists || emptyChecked());
       prevStoreIdRef.current = activeStoreId;
       setStoreDataLoaded(true);
     })();
