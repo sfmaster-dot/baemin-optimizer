@@ -468,6 +468,29 @@ export default function App() {
 
         .platformTab:hover { background: #1c2021 !important; }
 
+        /* 플랫폼 탭 가로 스크롤 — 스크롤바 숨김 (Webkit) */
+        .appHeaderSub > div::-webkit-scrollbar,
+        [class*="platformTabs"]::-webkit-scrollbar {
+          display: none;
+        }
+
+        /* 모바일 — 5개+ 플랫폼 시 우측 페이드 힌트 (더 있다는 시각 신호) */
+        @media (max-width: 680px) {
+          .appHeaderSub {
+            position: relative;
+          }
+          .appHeaderSub::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 24px;
+            background: linear-gradient(to right, transparent, #0f1110);
+            pointer-events: none;
+          }
+        }
+
         .fabMain {
           width: 60px; height: 60px; border-radius: 50%;
           background: linear-gradient(135deg, #3dba6f 0%, #00a869 100%);
@@ -611,8 +634,17 @@ const S = {
   badge: { display: 'inline-flex', alignItems: 'center', padding: '2px 8px', background: 'rgba(61,186,111,.12)', color: '#3dba6f', border: '1px solid rgba(61,186,111,.3)', borderRadius: '4px', fontSize: '10.5px', fontWeight: 600 },
   badgeInline: { display: 'inline-flex', alignItems: 'center', padding: '2px 8px', background: 'rgba(61,186,111,.12)', color: '#3dba6f', border: '1px solid rgba(61,186,111,.3)', borderRadius: '4px', fontSize: '10.5px', fontWeight: 600, marginLeft: '8px' },
 
-  // 플랫폼 토글 탭 — 헤더 sub 줄에 노출
-  platformTabs: { display: 'flex', gap: '6px' },
+  // 플랫폼 토글 탭 — 헤더 sub 줄에 노출 (5개+ 대응 가로 스크롤)
+  platformTabs: {
+    display: 'flex',
+    gap: '6px',
+    overflowX: 'auto',
+    overflowY: 'hidden',
+    WebkitOverflowScrolling: 'touch',
+    scrollbarWidth: 'none',     // Firefox
+    msOverflowStyle: 'none',    // IE/Edge legacy
+    padding: '2px 0',           // 스크롤 시 잘림 방지
+  },
   platformTab: {
     display: 'inline-flex', alignItems: 'center', gap: '6px',
     padding: '4px 10px',
@@ -625,6 +657,8 @@ const S = {
     cursor: 'pointer',
     fontFamily: 'inherit',
     transition: 'all .2s',
+    flexShrink: 0,              // ⭐ 버튼 줄어들지 않음
+    whiteSpace: 'nowrap',       // ⭐ 텍스트 줄바꿈 방지
   },
   platformCount: {
     fontSize: '10.5px',
