@@ -122,6 +122,24 @@ export default function CheckItem({ item, checked, onToggle, userId, storeId }) 
               </div>
             )}
 
+            {/* 규격·정보 표 */}
+            {g.spec && (
+              <div style={S.gsec}>
+                <div style={S.gtitle}>{g.spec.title || '공식 규격'}</div>
+                <div style={S.specTable}>
+                  {g.spec.rows.map((r, i) => (
+                    <div key={i} style={{
+                      ...S.specRow,
+                      borderBottom: i === g.spec.rows.length - 1 ? 'none' : '1px solid #1f2424',
+                    }}>
+                      <div style={S.specLabel}>{r.label}</div>
+                      <div style={S.specValue}>{linkify(r.value)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* 예시 */}
             {g.example && (
               <div style={S.gsec}>
@@ -277,6 +295,27 @@ const S = {
   extext: {
     fontSize: '13px', color: '#9aada6', lineHeight: 1.7,
     whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'inherit',
+  },
+
+  /* 공식 규격·노출 위치 등 표 */
+  specTable: {
+    background: '#0f1110', border: '1px solid #2a3030',
+    borderLeft: '3px solid #4090e0', borderRadius: '6px',
+    overflow: 'hidden',
+  },
+  specRow: {
+    display: 'grid', gridTemplateColumns: 'minmax(110px, 30%) 1fr',
+    borderBottom: '1px solid #1f2424',
+  },
+  specLabel: {
+    padding: '10px 14px',
+    fontSize: '12px', fontWeight: 600,
+    color: '#7aaee0', background: '#13191f',
+    borderRight: '1px solid #1f2424',
+  },
+  specValue: {
+    padding: '10px 14px',
+    fontSize: '12.5px', color: '#c8d0cc', lineHeight: 1.55,
   },
 
   warn: {
