@@ -9,8 +9,11 @@
 // 플랫폼 정의
 // ──────────────────────────────────
 export const PLATFORMS = [
-  { id: 'baemin',  label: '🛵 배민',     short: '배민',     color: '#2AC1BC', logo: '/baemin-logo.png' },
-  { id: 'coupang', label: '🛺 쿠팡이츠', short: '쿠팡이츠', color: '#FF003E', logo: '/coupang-logo.png' },
+  { id: 'baemin',   label: '🛵 배민',     short: '배민',     color: '#2AC1BC', logo: '/baemin-logo.png' },
+  { id: 'coupang',  label: '🛺 쿠팡이츠', short: '쿠팡이츠', color: '#FF003E', logo: '/coupang-logo.png' },
+  { id: 'yogiyo',   label: '🍔 요기요',   short: '요기요',   color: '#E8154B', logo: '/yogiyo-logo.png' },
+  { id: 'ddanggyo', label: '🤝 땡겨요',   short: '땡겨요',   color: '#F2632F', logo: '/ddanggyo-logo.png' },
+  { id: 'mukkebi',  label: '🍱 먹깨비',   short: '먹깨비',   color: '#FFC72C', logo: '/mukkebi-logo.png' },
 ];
 
 export const PLATFORM_IDS = PLATFORMS.map(p => p.id);
@@ -1366,14 +1369,31 @@ ROAS 5배 미만 (주의) — 매장 매력 보강 우선, 광고 일시 중단�
 // Export — 플랫폼 키로 분리된 통합 구조
 // ============================================================
 
+// ============================================================
+// 신규 플랫폼 — 데이터 작성 전 (UI 작동을 위한 빈 구조)
+// ============================================================
+
+const YOGIYO_SECTIONS = [];
+const YOGIYO_CHECKLIST = [];
+const DDANGGYO_SECTIONS = [];
+const DDANGGYO_CHECKLIST = [];
+const MUKKEBI_SECTIONS = [];
+const MUKKEBI_CHECKLIST = [];
+
 export const SECTIONS = {
-  baemin:  BAEMIN_SECTIONS,
-  coupang: COUPANG_SECTIONS,
+  baemin:   BAEMIN_SECTIONS,
+  coupang:  COUPANG_SECTIONS,
+  yogiyo:   YOGIYO_SECTIONS,
+  ddanggyo: DDANGGYO_SECTIONS,
+  mukkebi:  MUKKEBI_SECTIONS,
 };
 
 export const CHECKLIST = {
-  baemin:  BAEMIN_CHECKLIST,
-  coupang: COUPANG_CHECKLIST,
+  baemin:   BAEMIN_CHECKLIST,
+  coupang:  COUPANG_CHECKLIST,
+  yogiyo:   YOGIYO_CHECKLIST,
+  ddanggyo: DDANGGYO_CHECKLIST,
+  mukkebi:  MUKKEBI_CHECKLIST,
 };
 
 // SECTIONS count 자동 계산 — 플랫폼별

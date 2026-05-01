@@ -388,14 +388,29 @@ export default function App() {
         )}
 
         <div style={{ minHeight: '300px' }}>
-          {activeItems.map(item => (
-            <CheckItem key={item.id} item={item} checked={!!platformChecked[item.id]} onToggle={toggle} userId={user?.uid} storeId={activeStoreId} />
-          ))}
+          {/* 빈 플랫폼 — 준비 중 안내 */}
+          {checklist.length === 0 ? (
+            <div style={S.comingSoonBox}>
+              <div style={S.comingSoonIcon}>🚧</div>
+              <div style={S.comingSoonTitle}>{currentPlatformObj.short} 콘텐츠 준비 중</div>
+              <div style={S.comingSoonDesc}>
+                매출 전략 항목을 만들고 있습니다.<br/>
+                완성되는 대로 공개돼요.
+              </div>
+              <div style={S.comingSoonHint}>
+                현재 사용 가능한 플랫폼으로 전환해보세요 👆
+              </div>
+            </div>
+          ) : (
+            activeItems.map(item => (
+              <CheckItem key={item.id} item={item} checked={!!platformChecked[item.id]} onToggle={toggle} userId={user?.uid} storeId={activeStoreId} />
+            ))
+          )}
         </div>
 
         {done === total && total > 0 && (
           <div style={S.banner}>
-            <div style={S.bannerTitle}>🏆 {currentPlatform === 'baemin' ? '배민' : '쿠팡이츠'} 최적화 완료!</div>
+            <div style={S.bannerTitle}>🏆 {currentPlatformObj.short} 최적화 완료!</div>
             <div style={S.bannerSub}>{total}개 항목을 모두 확인했습니다.<br />이제 주문이 들어올 모든 준비가 됐습니다.</div>
           </div>
         )}
@@ -688,6 +703,13 @@ const S = {
   banner: { background: 'linear-gradient(135deg,#1e4a32,#0d3020)', border: '1px solid #3dba6f', borderRadius: '14px', padding: '24px', textAlign: 'center', marginTop: '24px' },
   bannerTitle: { fontSize: '20px', fontWeight: 700, color: '#3dba6f', marginBottom: '8px' },
   bannerSub: { fontSize: '13px', color: '#7acf9a', lineHeight: 1.7 },
+
+  /* 빈 플랫폼 — 준비 중 안내 */
+  comingSoonBox: { background: '#16191a', border: '1px solid #2a3030', borderRadius: '14px', padding: '48px 24px', textAlign: 'center', marginTop: '40px' },
+  comingSoonIcon: { fontSize: '48px', marginBottom: '16px' },
+  comingSoonTitle: { fontSize: '20px', fontWeight: 700, color: '#e8ede8', marginBottom: '12px' },
+  comingSoonDesc: { fontSize: '14px', color: '#9aada6', lineHeight: 1.7, marginBottom: '20px' },
+  comingSoonHint: { fontSize: '12.5px', color: '#3dba6f', fontWeight: 500 },
 
   fab: { position: 'fixed', bottom: '28px', right: '28px', zIndex: 60, display: 'flex', flexDirection: 'column-reverse', alignItems: 'flex-end', gap: '10px' },
   fabMain: {},
