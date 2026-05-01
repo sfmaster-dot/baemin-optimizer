@@ -1,6 +1,50 @@
+import { useState, useEffect } from 'react';
 import { signInWithGoogle } from '../lib/firebase';
 
 export default function LoginScreen() {
+  // PWA 설치 프롬프트 캐치 (Chrome·Edge·Whale)
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+
+  useEffect(() => {
+    // 1. 이미 설치된 상태 감지 (PWA로 실행 중)
+    const standalone = window.matchMedia('(display-mode: standalone)').matches
+                    || window.navigator.standalone === true;
+    setIsInstalled(standalone);
+
+    // 2. iOS Safari는 beforeinstallprompt를 지원하지 ❌ — 별도 안내 필요
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    setIsIOS(ios);
+
+    // 3. Chrome·Edge·Whale 등 — 설치 가능 시 이벤트 캐치
+    const handler = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+
+    // 4. 설치 완료 감지
+    const installedHandler = () => setIsInstalled(true);
+    window.addEventListener('appinstalled', installedHandler);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', installedHandler);
+    };
+  }, []);
+
+  async function handleInstall() {
+    if (installPrompt) {
+      installPrompt.prompt();
+      const { outcome } = await installPrompt.userChoice;
+      if (outcome === 'accepted') setInstallPrompt(null);
+    } else if (isIOS) {
+      // iOS는 수동 안내
+      alert('아이폰 설치 방법:\n\n1. Safari 하단 공유 버튼 (□↑) 탭\n2. "홈 화면에 추가" 선택\n3. 우측 상단 "추가" 탭');
+    }
+  }
+
   async function handleLogin() {
     try {
       await signInWithGoogle();
@@ -8,6 +52,9 @@ export default function LoginScreen() {
       alert('로그인에 실패했습니다. 다시 시도해주세요.');
     }
   }
+
+  // 설치 가능 여부 — 안드로이드 Chrome 등은 prompt, iOS는 isIOS, 그 외는 ❌
+  const canInstall = !isInstalled && (installPrompt || isIOS);
 
   return (
     <div style={S.root}>
@@ -21,6 +68,18 @@ export default function LoginScreen() {
           배달앱 사장님을 위한 <strong style={{color:'#3dba6f'}}>매출 전략 체크리스트</strong><br/>
           가게관리 · 메뉴 · 할인 · 광고 · 리뷰까지 항목별 공략집
         </p>
+
+        {/* PWA 설치 버튼 — 설치 가능한 환경에서만 노출 */}
+        {canInstall && (
+          <button style={S.installBtn} onClick={handleInstall}>
+            <span style={S.installIcon}>📱</span>
+            <div style={S.installText}>
+              <div style={S.installTitle}>폰에 앱처럼 설치하기</div>
+              <div style={S.installDesc}>홈 화면 추가 · 한 번 클릭으로 실행</div>
+            </div>
+            <span style={S.installArrow}>›</span>
+          </button>
+        )}
 
         <div style={S.features}>
           <Feature icon='✅' title='배달앱 통합 체크리스트' desc='배달앱별 매출 전략 항목별 점검' />
@@ -74,7 +133,30 @@ const S = {
   logo: { width:'100%', height:'100%', objectFit:'contain', display:'block', padding:'10px' },
 
   title: { fontSize:'26px', fontWeight:800, letterSpacing:'-0.5px', marginBottom:'14px', margin:0, lineHeight:1.3 },
-  subtitle: { fontSize:'14px', color:'#9aada6', lineHeight:1.7, marginTop:'14px', marginBottom:'36px' },
+  subtitle: { fontSize:'14px', color:'#9aada6', lineHeight:1.7, marginTop:'14px', marginBottom:'28px' },
+
+  // PWA 설치 유도 버튼 — 청록 강조
+  installBtn: {
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+    padding: '14px 18px',
+    background: 'linear-gradient(135deg, rgba(42,193,188,.15), rgba(0,179,164,.08))',
+    border: '1px solid rgba(42,193,188,.4)',
+    borderRadius: '12px',
+    color: '#e8ede8',
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    transition: 'all .2s',
+    marginBottom: '24px',
+    textAlign: 'left',
+  },
+  installIcon: { fontSize: '28px', flexShrink: 0 },
+  installText: { flex: 1 },
+  installTitle: { fontSize: '14px', fontWeight: 700, color: '#2AC1BC', marginBottom: '3px' },
+  installDesc: { fontSize: '12px', color: '#9aada6', lineHeight: 1.4 },
+  installArrow: { fontSize: '20px', color: '#2AC1BC', flexShrink: 0 },
 
   features: { display:'flex', flexDirection:'column', gap:'12px', marginBottom:'36px', textAlign:'left' },
   feat: { display:'flex', gap:'14px', alignItems:'flex-start', padding:'14px 16px', background:'#16191a', border:'1px solid #2a3030', borderRadius:'10px' },
