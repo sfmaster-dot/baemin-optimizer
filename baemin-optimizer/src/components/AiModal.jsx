@@ -147,6 +147,7 @@ const DEFAULT_FORM = {
   firstLine:'',
   currentName:'', ingredient:'',
   menuName:'', taste:'', compose:'',
+  mode:'single', menuBoard:'', atmosphere:'',
   basePrice:'', basePortion:'1~2인분', toppings:'', sides:'', drinks:'', targetAOV:'+5,000원', stage:'안정기',
   review:'', rating:'5',
 };
@@ -257,7 +258,7 @@ export default function AiModal({ item, onClose, userId, storeId }) {
       notice:     ['storeName','story'],
       menuname:   ['currentName','category'],
       menudesc:   ['menuName','taste'],
-      menuoption: ['menuName','basePrice'],
+      menuoption: form.mode === 'board' ? ['menuBoard'] : ['menuName','basePrice'],
       reply:      ['storeName','review','rating'],
     }[type] || [];
     if (required.some(k => !form[k])) { alert('필수 항목(*)을 모두 입력해주세요.'); return; }
@@ -444,18 +445,62 @@ export default function AiModal({ item, onClose, userId, storeId }) {
           </>}
 
           {type==='menuoption' && <>
-            <div style={S.row}>
-              <Field label="메뉴명 *" placeholder="예: 불향차돌떡볶이" value={form.menuName} onChange={v=>set('menuName',v)} flash={flashStyle} />
-              <Field label="기본 가격 *" placeholder="예: 18,000원 또는 18000" value={form.basePrice} onChange={v=>set('basePrice',v)} flash={flashStyle} />
+            {/* 모드 선택 탭 */}
+            <div style={S.modeTabs}>
+              <button
+                style={{...S.modeTab, ...(form.mode !== 'board' ? S.modeTabActive : {})}}
+                onClick={() => set('mode', 'single')}
+                className='modeTab'
+              >단일 메뉴</button>
+              <button
+                style={{...S.modeTab, ...(form.mode === 'board' ? S.modeTabActive : {})}}
+                onClick={() => set('mode', 'board')}
+                className='modeTab'
+              >📋 메뉴판 전체 ★</button>
             </div>
-            <Field label="기본 인분" placeholder="예: 1~2인분, 2인분" value={form.basePortion} onChange={v=>set('basePortion',v)} flash={flashStyle} />
-            <Field label="토핑 후보 (쉼표로 구분)" placeholder="예: 차돌박이, 모짜렐라치즈, 통새우 5마리" value={form.toppings} onChange={v=>set('toppings',v)} textarea flash={flashStyle} />
-            <Field label="사이드 후보 (쉼표로 구분)" placeholder="예: 볶음밥, 군만두, 김말이튀김, 라면사리" value={form.sides} onChange={v=>set('sides',v)} flash={flashStyle} />
-            <Field label="음료 후보 (쉼표로 구분)" placeholder="예: 콜라, 사이다, 청포도에이드" value={form.drinks} onChange={v=>set('drinks',v)} flash={flashStyle} />
-            <div style={S.row}>
-              <Field label="객단가 목표" placeholder="예: +5,000원, +30%" value={form.targetAOV} onChange={v=>set('targetAOV',v)} flash={flashStyle} />
-              <SelectField label="운영 시기" value={form.stage} onChange={v=>set('stage',v)} options={['오픈 초기','성장기','안정기']} />
-            </div>
+
+            {/* 단일 메뉴 모드 (기본) */}
+            {form.mode !== 'board' && <>
+              <div style={S.row}>
+                <Field label="메뉴명 *" placeholder="예: 불향차돌떡볶이" value={form.menuName} onChange={v=>set('menuName',v)} flash={flashStyle} />
+                <Field label="기본 가격 *" placeholder="예: 18,000원 또는 18000" value={form.basePrice} onChange={v=>set('basePrice',v)} flash={flashStyle} />
+              </div>
+              <Field label="기본 인분" placeholder="예: 1~2인분, 2인분" value={form.basePortion} onChange={v=>set('basePortion',v)} flash={flashStyle} />
+              <Field label="토핑 후보 (쉼표로 구분)" placeholder="예: 차돌박이, 모짜렐라치즈, 통새우 5마리" value={form.toppings} onChange={v=>set('toppings',v)} textarea flash={flashStyle} />
+              <Field label="사이드 후보 (쉼표로 구분)" placeholder="예: 볶음밥, 군만두, 김말이튀김, 라면사리" value={form.sides} onChange={v=>set('sides',v)} flash={flashStyle} />
+              <Field label="음료 후보 (쉼표로 구분)" placeholder="예: 콜라, 사이다, 청포도에이드" value={form.drinks} onChange={v=>set('drinks',v)} flash={flashStyle} />
+              <div style={S.row}>
+                <Field label="객단가 목표" placeholder="예: +5,000원, +30%" value={form.targetAOV} onChange={v=>set('targetAOV',v)} flash={flashStyle} />
+                <SelectField label="운영 시기" value={form.stage} onChange={v=>set('stage',v)} options={['오픈 초기','성장기','안정기']} />
+              </div>
+            </>}
+
+            {/* 메뉴판 전체 모드 — 신규 ★ */}
+            {form.mode === 'board' && <>
+              <Field
+                label="메뉴판 전체 *"
+                placeholder={`메뉴판을 그대로 붙여넣으세요. 예:
+
+1. 불향차돌떡볶이 18,000원 (2인분)
+2. 로제떡볶이 16,000원 (2인분)
+3. 매운국물떡볶이 15,000원
+4. 김말이튀김 5,000원
+5. 군만두 5,000원
+6. 콜라 2,000원
+7. 청포도에이드 4,000원
+
+* 메뉴 카테고리·옵션 트리·리뷰이벤트·객단가 시뮬레이션까지 한꺼번에 분석`}
+                value={form.menuBoard}
+                onChange={v=>set('menuBoard',v)}
+                textarea
+                flash={flashStyle}
+              />
+              <Field label="업종/매장 분위기" placeholder="예: 분식·야식 / 캐주얼 / 가족 외식형" value={form.atmosphere} onChange={v=>set('atmosphere',v)} flash={flashStyle} />
+              <div style={S.row}>
+                <Field label="객단가 목표" placeholder="예: +5,000원, +30%" value={form.targetAOV} onChange={v=>set('targetAOV',v)} flash={flashStyle} />
+                <SelectField label="운영 시기" value={form.stage} onChange={v=>set('stage',v)} options={['오픈 초기','성장기','안정기']} />
+              </div>
+            </>}
           </>}
 
           {type==='reply' && <>
@@ -616,6 +661,35 @@ const S = {
     WebkitBoxOrient: 'vertical',
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-all',
+  },
+
+  /* 모드 탭 (menuoption — 단일/메뉴판 전체) */
+  modeTabs: {
+    display: 'flex',
+    gap: '6px',
+    marginBottom: '16px',
+    padding: '4px',
+    background: '#0d0f10',
+    border: '1px solid #2a2f30',
+    borderRadius: '8px',
+  },
+  modeTab: {
+    flex: 1,
+    padding: '8px 12px',
+    background: 'transparent',
+    border: 'none',
+    borderRadius: '6px',
+    color: '#9aada6',
+    fontSize: '12.5px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    transition: 'all .2s',
+  },
+  modeTabActive: {
+    background: 'rgba(61,186,111,.15)',
+    color: '#3dba6f',
+    boxShadow: 'inset 0 0 0 1px rgba(61,186,111,.4)',
   },
 
   presetWrap: { marginBottom:'18px' },
