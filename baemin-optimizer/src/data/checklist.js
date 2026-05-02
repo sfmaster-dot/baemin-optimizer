@@ -466,6 +466,7 @@ const BAEMIN_CHECKLIST = [
 
   { id:14, section:2, name:'메뉴 옵션', badge:'must', badgeLabel:'필수', cycle:'6m',
     desc:'객단가를 끌어올리는 가장 강력한 레버 — 옵션 구성·옵션명·옵션설명 전부',
+    aiType:'menuoption', aiLabel:'메뉴 옵션 AI 설계',
     guide:{
       points:[
         {strong:'옵션 = 객단가 +20~40% 레버',

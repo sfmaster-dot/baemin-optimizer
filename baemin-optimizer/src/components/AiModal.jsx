@@ -147,6 +147,7 @@ const DEFAULT_FORM = {
   firstLine:'',
   currentName:'', ingredient:'',
   menuName:'', taste:'', compose:'',
+  basePrice:'', basePortion:'1~2인분', toppings:'', sides:'', drinks:'', targetAOV:'+5,000원', stage:'안정기',
   review:'', rating:'5',
 };
 
@@ -256,6 +257,7 @@ export default function AiModal({ item, onClose, userId, storeId }) {
       notice:     ['storeName','story'],
       menuname:   ['currentName','category'],
       menudesc:   ['menuName','taste'],
+      menuoption: ['menuName','basePrice'],
       reply:      ['storeName','review','rating'],
     }[type] || [];
     if (required.some(k => !form[k])) { alert('필수 항목(*)을 모두 입력해주세요.'); return; }
@@ -308,7 +310,7 @@ export default function AiModal({ item, onClose, userId, storeId }) {
   const flashStyle = { background: flash ? 'rgba(61,186,111,.18)' : '#0d0f10', transition: 'background .4s' };
 
   // 결과 출력 후 사장님 정체성 안내문 노출 여부
-  const showIdentityHint = ['intro','orderguide','notice','menuname','menudesc'].includes(type);
+  const showIdentityHint = ['intro','orderguide','notice','menuname','menudesc','menuoption'].includes(type);
 
   return (
     <div style={S.overlay} onClick={onClose}>
@@ -439,6 +441,21 @@ export default function AiModal({ item, onClose, userId, storeId }) {
             <Field label="진행 중인 이벤트·할인" placeholder="예: 즉시할인 5,000원, 첫 주문 쿠폰, 리뷰 이벤트" value={form.event} onChange={v=>set('event',v)} flash={flashStyle} />
             <Field label="강조할 대표메뉴" placeholder="예: 30년 비법 시그니처 아구찜, 된장술밥 세트" value={form.featuredMenu} onChange={v=>set('featuredMenu',v)} flash={flashStyle} />
             <Field label="시즌·운영 특이사항" placeholder="예: 겨울 한정 굴 추가, 새벽 영업, 단체 주문 환영" value={form.extraNotice} onChange={v=>set('extraNotice',v)} textarea flash={flashStyle} />
+          </>}
+
+          {type==='menuoption' && <>
+            <div style={S.row}>
+              <Field label="메뉴명 *" placeholder="예: 불향차돌떡볶이" value={form.menuName} onChange={v=>set('menuName',v)} flash={flashStyle} />
+              <Field label="기본 가격 *" placeholder="예: 18,000원 또는 18000" value={form.basePrice} onChange={v=>set('basePrice',v)} flash={flashStyle} />
+            </div>
+            <Field label="기본 인분" placeholder="예: 1~2인분, 2인분" value={form.basePortion} onChange={v=>set('basePortion',v)} flash={flashStyle} />
+            <Field label="토핑 후보 (쉼표로 구분)" placeholder="예: 차돌박이, 모짜렐라치즈, 통새우 5마리" value={form.toppings} onChange={v=>set('toppings',v)} textarea flash={flashStyle} />
+            <Field label="사이드 후보 (쉼표로 구분)" placeholder="예: 볶음밥, 군만두, 김말이튀김, 라면사리" value={form.sides} onChange={v=>set('sides',v)} flash={flashStyle} />
+            <Field label="음료 후보 (쉼표로 구분)" placeholder="예: 콜라, 사이다, 청포도에이드" value={form.drinks} onChange={v=>set('drinks',v)} flash={flashStyle} />
+            <div style={S.row}>
+              <Field label="객단가 목표" placeholder="예: +5,000원, +30%" value={form.targetAOV} onChange={v=>set('targetAOV',v)} flash={flashStyle} />
+              <SelectField label="운영 시기" value={form.stage} onChange={v=>set('stage',v)} options={['오픈 초기','성장기','안정기']} />
+            </div>
           </>}
 
           {type==='reply' && <>
