@@ -140,6 +140,40 @@ const PRESETS = {
   },
 };
 
+// ── menuoption 가이드 — 사장님 7가지 옵션 설계 룰 (v8-5) ──
+const MENUOPTION_GUIDES = [
+  {
+    n: '1',
+    title: '옵션 = 객단가 +20~40% 레버',
+    desc: '메인 가격은 그대로 두고 옵션·세트로 객단가를 끌어올리는 가장 강력한 도구. 메인 가격 인상 없이 결제 단가만 올릴 수 있어 가격 저항 ❌.',
+  },
+  {
+    n: '2',
+    title: '필수 옵션 = 진입가 ↓ / 선택 옵션 = 객단가 ↑',
+    desc: '메인 가격을 1인분 같은 낮은 기준으로 표시하고 사이즈·맛 등을 [필수 옵션]으로 빼면 진입가가 낮아져 클릭률 ↑ (12,000원 노출 → 2인분 +8,000원). [선택 옵션]은 토핑·사이드·음료. 가격 앵커링도 함께 — 비싼 옵션을 위에 두면 중간 옵션이 합리적으로 보임.',
+  },
+  {
+    n: '3',
+    title: '카테고리명·옵션명 = 가치 한 단어',
+    desc: "카테고리: '사이즈 선택' ❌ → '몇 명이 드세요?' / '소스 선택' ❌ → '오늘은 어떤 맛?'. 옵션: '치즈 추가' ❌ → '모짜렐라 치즈 추가' / '곱배기' ❌ → '양 1.5배 곱배기'. 기능 나열 ❌, 가치 전달 ✅. 15자 이내 직관적으로.",
+  },
+  {
+    n: '4',
+    title: "'맛 변화'·'양 변화'는 구체적 숫자로",
+    desc: '추상어 ❌. "맛있게 매워집니다" ❌ → "청양고추 2배 + 베트남 고추, 땀나는 매운맛" ✅. "양 많아져요" ❌ → "메인 양 1.5배, 2명이 충분히 드실 수 있는 양" ✅.',
+  },
+  {
+    n: '5',
+    title: '⭐ 리뷰이벤트 — 시기별 위치 전략',
+    desc: '리뷰이벤트 사이드는 옵션 맨 아래 또는 맨 위 별도 카테고리로 분리. • 오픈 초기·리뷰 부족 시기 → 맨 위 배치 (리뷰 빨리 모으기) • 안정기 → 맨 아래 배치 (옵션 결제 ↑ 후 리뷰이벤트 노출, 마진 보호).',
+  },
+  {
+    n: '6',
+    title: '⭐ 리뷰이벤트 — 무료 → 저가 유료 전환',
+    desc: "안정기에는 '판매가 4,000원짜리를 무료 제공' → '판매가 4,000원짜리를 1,900원에 제공' 같은 저가 유료 전환이 효과적. 사장님 마진 회복 + 고객은 '싸게 산 진짜 메뉴'로 인식 → 만족도 + 재주문률 동반 상승. 100% 무료 사은품보다 똘똘한 운영.",
+  },
+];
+
 const DEFAULT_FORM = {
   category:'', mainMenu:'', feature:'', style:'',
   includes:'공기밥, 김치', allergy:'', spicy:'가능', peakTime:'20~30분',
@@ -206,6 +240,9 @@ export default function AiModal({ item, onClose, userId, storeId }) {
   // 히스토리 관련 state
   const [history, setHistory]         = useState([]);  // [{ ts, content }]
   const [historyOpen, setHistoryOpen] = useState(false);
+
+  // menuoption 가이드 펼침 state (v8-5)
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const type = item.aiType;
   const set  = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -313,6 +350,9 @@ export default function AiModal({ item, onClose, userId, storeId }) {
   // 결과 출력 후 사장님 정체성 안내문 노출 여부
   const showIdentityHint = ['intro','orderguide','notice','menuname','menudesc','menuoption'].includes(type);
 
+  // menuoption 전용 가이드 박스 노출 여부 (v8-5)
+  const isMenuoption = type === 'menuoption';
+
   return (
     <div style={S.overlay} onClick={onClose}>
       <div style={S.modal} onClick={e => e.stopPropagation()}>
@@ -366,6 +406,17 @@ export default function AiModal({ item, onClose, userId, storeId }) {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* 💡 menuoption 전용 — 상단 격언 박스 (v8-5) */}
+          {isMenuoption && (
+            <div style={S.aphorismBox}>
+              <span style={S.aphorismIcon}>💡</span>
+              <span style={S.aphorismText}>
+                메뉴 리스트는 <strong style={S.aphorismHighlight}>12,000원</strong>으로 보이고,
+                결제는 <strong style={S.aphorismHighlight}>25,000원</strong>으로 끝난다
+              </span>
             </div>
           )}
 
@@ -530,6 +581,37 @@ export default function AiModal({ item, onClose, userId, storeId }) {
               </div>
             </div>
           )}
+
+          {/* 📚 menuoption 전용 — 하단 펼침 가이드 박스 (v8-5) */}
+          {isMenuoption && (
+            <div style={S.guideWrap}>
+              <button
+                style={S.guideToggle}
+                onClick={() => setGuideOpen(o => !o)}
+                className='guideToggle'
+              >
+                <span>📚 옵션 설계 6가지 핵심 가이드</span>
+                <span style={{
+                  transform: guideOpen ? 'rotate(180deg)' : 'rotate(0)',
+                  transition: 'transform .25s',
+                  fontSize: '11px',
+                }}>▼</span>
+              </button>
+              {guideOpen && (
+                <div style={S.guideList}>
+                  {MENUOPTION_GUIDES.map((g) => (
+                    <div key={g.n} style={S.guideItem}>
+                      <div style={S.guideTitle}>
+                        <span style={S.guideNum}>{g.n}</span>
+                        <span>{g.title}</span>
+                      </div>
+                      <div style={S.guideDesc}>{g.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -540,6 +622,7 @@ export default function AiModal({ item, onClose, userId, storeId }) {
         .histToggle:hover { background: rgba(232,160,32,.12) !important; }
         .histItem:hover { background: rgba(232,160,32,.08) !important; border-color: rgba(232,160,32,.4) !important; }
         .histDelBtn:hover { color: #e85040 !important; background: rgba(232,80,64,.15) !important; }
+        .guideToggle:hover { background: rgba(61,186,111,.12) !important; }
       `}</style>
     </div>
   );
@@ -661,6 +744,98 @@ const S = {
     WebkitBoxOrient: 'vertical',
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-all',
+  },
+
+  /* 💡 menuoption 상단 격언 박스 (v8-5) */
+  aphorismBox: {
+    marginBottom: '16px',
+    padding: '14px 16px',
+    background: 'linear-gradient(135deg, rgba(232,160,32,.12) 0%, rgba(232,160,32,.04) 100%)',
+    border: '1px solid rgba(232,160,32,.35)',
+    borderLeft: '3px solid #e8a020',
+    borderRadius: '8px',
+    fontSize: '13px',
+    color: '#e8d5a6',
+    lineHeight: 1.6,
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '10px',
+  },
+  aphorismIcon: {
+    fontSize: '16px',
+    flexShrink: 0,
+    marginTop: '-1px',
+  },
+  aphorismText: {
+    flex: 1,
+  },
+  aphorismHighlight: {
+    color: '#e8a020',
+    fontWeight: 700,
+  },
+
+  /* 📚 menuoption 하단 펼침 가이드 박스 (v8-5) */
+  guideWrap: {
+    marginTop: '16px',
+    background: 'rgba(61,186,111,.06)',
+    border: '1px solid rgba(61,186,111,.25)',
+    borderRadius: '8px',
+    overflow: 'hidden',
+  },
+  guideToggle: {
+    width: '100%',
+    background: 'transparent',
+    border: 'none',
+    padding: '11px 14px',
+    fontSize: '12.5px',
+    fontWeight: 600,
+    color: '#3dba6f',
+    cursor: 'pointer',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    fontFamily: 'inherit',
+    transition: 'background .2s',
+  },
+  guideList: {
+    padding: '4px 14px 14px 14px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  guideItem: {
+    background: '#0d0f10',
+    border: '1px solid #2a2f30',
+    borderRadius: '6px',
+    padding: '10px 12px',
+  },
+  guideTitle: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    fontSize: '12.5px',
+    fontWeight: 700,
+    color: '#e8ede8',
+    marginBottom: '6px',
+  },
+  guideNum: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '20px',
+    height: '20px',
+    background: 'rgba(61,186,111,.18)',
+    color: '#3dba6f',
+    borderRadius: '50%',
+    fontSize: '11px',
+    fontWeight: 700,
+    flexShrink: 0,
+  },
+  guideDesc: {
+    fontSize: '11.5px',
+    color: '#c0c8c4',
+    lineHeight: 1.65,
+    paddingLeft: '28px',
   },
 
   /* 모드 탭 (menuoption — 단일/메뉴판 전체) */
