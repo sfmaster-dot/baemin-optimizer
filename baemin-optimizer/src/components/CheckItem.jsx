@@ -79,6 +79,17 @@ export default function CheckItem({ item, checked, onToggle, userId, storeId }) 
               </div>
             )}
 
+            {/* ★ 펼침 영역 (collapsibles) */}
+            {g.collapsibles && g.collapsibles.map((item, idx) => (
+              <CollapsibleSection
+                key={idx}
+                label={item.label}
+                defaultOpen={item.defaultOpen}
+              >
+                <pre style={S.collapsibleText}>{linkify(item.content)}</pre>
+              </CollapsibleSection>
+            ))}
+
             {/* 🛑 자가검증 체크박스 (prerequisiteCheck) */}
             {g.prerequisiteCheck && (
               <div style={S.prereq}>
@@ -271,6 +282,53 @@ const S = {
     lineHeight: 1.55,
   },
 
+  collapsible: {
+    background: '#13191f',
+    border: '1px solid #2a3030',
+    borderLeft: '3px solid #4090e0',
+    borderRadius: '6px',
+    marginBottom: '16px',
+    overflow: 'hidden',
+  },
+  collapsibleHeader: {
+    padding: '11px 14px',
+    cursor: 'pointer',
+    userSelect: 'none',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    background: '#1a2228',
+    transition: 'background .15s',
+  },
+  collapsibleHeaderOpen: {
+    background: '#13191f',
+    borderBottom: '1px solid #2a3030',
+  },
+  collapsibleLabel: {
+    fontSize: '13px',
+    fontWeight: 700,
+    color: '#7aaee0',
+    letterSpacing: '-0.2px',
+  },
+  collapsibleChev: {
+    width: '14px',
+    height: '14px',
+    color: '#7aaee0',
+    transition: 'transform .25s',
+    flexShrink: 0,
+  },
+  collapsibleContent: {
+    padding: '12px 14px',
+  },
+  collapsibleText: {
+    fontSize: '13px',
+    color: '#9aada6',
+    lineHeight: 1.7,
+    whiteSpace: 'pre-wrap',
+    margin: 0,
+    fontFamily: 'inherit',
+  },
+
   gsec: { marginBottom: '14px' },
   gtitle: {
     fontSize: '10px', fontWeight: 700, letterSpacing: '.08em',
@@ -337,3 +395,29 @@ const S = {
     display: 'flex', alignItems: 'center', gap: '6px',
   },
 };
+
+function CollapsibleSection({ label, defaultOpen = false, children }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  
+  return (
+    <div style={S.collapsible}>
+      <div 
+        style={{...S.collapsibleHeader, ...(isOpen ? S.collapsibleHeaderOpen : {})}}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span style={S.collapsibleLabel}>{label}</span>
+        <svg 
+          style={{...S.collapsibleChev, transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)'}}
+          viewBox="0 0 20 20" fill="currentColor"
+        >
+          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"/>
+        </svg>
+      </div>
+      {isOpen && (
+        <div style={S.collapsibleContent}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
