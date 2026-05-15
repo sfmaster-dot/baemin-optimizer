@@ -871,7 +871,7 @@ const BAEMIN_CHECKLIST = [
       tip:'옵션 할인은 주문 단계에서 "이것도 할인되네" 심리로 추가 선택을 유도하는 강력한 장치입니다. 등록 위치: 셀프서비스 → 메뉴별 할인 관리 → 신규등록 → 옵션 할인.',
     }},
 
-  { id:20, section:3, name:'한그릇 할인', badge:'must', badgeLabel:'필수', cycle:'adhoc',
+  { id:20, section:3, name:'한그릇 할인', badge:'high', badgeLabel:'권장', cycle:'adhoc',
     desc:'노출은 보장, 마진은 빡빡 — 구조 안 되면 과감히 포기, 가능한 메뉴는 적극 또는 신설',
     guide:{
       warnTop:{ content:`🚨 한그릇 할인 — 배민이 가장 적극 권하는 만큼 사장님 마진이 가장 빡빡
