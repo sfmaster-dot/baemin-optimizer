@@ -1297,7 +1297,7 @@ const BAEMIN_CHECKLIST = [
   // ──────────────────────────────────
 
   { id:31, section:6, name:'노출-클릭-주문 funnel 진단', badge:'must', badgeLabel:'필수', cycle:'1m',
-    desc:'신규 acquisition funnel(노출→클릭→주문) 어디서 새는지 정밀 진단 — 단계별 전환율로 약점 식별 후 처방 카드 연동 (※ 재주문은 별도 카드)',
+    desc:'신규 주문 funnel(노출→클릭→주문) 어디서 새는지 정밀 진단 — 단계별 전환율로 약점 식별 후 처방 카드 연동 (※ 재주문은 별도 카드)',
     guide:{
       warnTop:{ content:`🎯 funnel 진단의 본질 — "어디서 새는지를 알아야 처방이 가능하다"
 
