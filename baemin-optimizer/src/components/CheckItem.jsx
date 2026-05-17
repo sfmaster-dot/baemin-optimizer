@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AiModal from './AiModal';
 import { linkify } from '../utils/linkify';
 
@@ -17,15 +17,39 @@ const CYCLE = {
   adhoc:    { label: '🔄 수시 체크',          color: '#4090e0', bg: 'rgba(64,144,224,.1)', border: 'rgba(64,144,224,.3)' },
 };
 
+// 모바일 감지 (≤680px)
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' && window.innerWidth <= 680
+  );
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth <= 680);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  return isMobile;
+}
+
 export default function CheckItem({ item, checked, onToggle, userId, storeId }) {
   const [open, setOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
-  // 자가검증 체크박스 로컬 상태 (저장 안 함, 펼침 동안만 유지)
   const [prereqChecks, setPrereqChecks] = useState({});
+  const isMobile = useIsMobile();
   const g = item.guide;
 
   const togglePrereq = (idx) => {
     setPrereqChecks(prev => ({ ...prev, [idx]: !prev[idx] }));
+  };
+
+  // 모바일 반응형 동적 스타일
+  const headStyle = {
+    ...S.head,
+    padding: isMobile ? '12px 14px' : '15px 16px',
+    gap: isMobile ? '10px' : '12px',
+  };
+  const panelStyle = {
+    ...S.panel,
+    padding: isMobile ? '16px 14px 18px 14px' : '18px 18px 20px 52px',
   };
 
   return (
@@ -35,7 +59,7 @@ export default function CheckItem({ item, checked, onToggle, userId, storeId }) 
         borderColor: checked ? '#1e4a32' : open ? '#323c38' : '#2a3030',
       }}>
         {/* 헤더 행 */}
-        <div style={S.head} onClick={() => setOpen(o => !o)}>
+        <div style={headStyle} onClick={() => setOpen(o => !o)}>
           {/* 체크박스 */}
           <div
             style={{ ...S.cb, background: checked ? '#3dba6f' : 'transparent', borderColor: checked ? '#3dba6f' : '#323c38' }}
@@ -71,7 +95,7 @@ export default function CheckItem({ item, checked, onToggle, userId, storeId }) 
 
         {/* 가이드 패널 */}
         {open && (
-          <div style={S.panel}>
+          <div style={panelStyle}>
             {/* 🚨 펼치자마자 가장 먼저 보이는 빨간 경고 박스 (warnTop) */}
             {g.warnTop && (
               <div style={S.warnTop}>
