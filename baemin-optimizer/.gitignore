@@ -31,3 +31,6 @@ dist-ssr
 
 # Backup files
 *.backup
+
+# Agent skills (local cache)
+.agents/
