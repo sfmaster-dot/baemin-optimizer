@@ -1170,7 +1170,7 @@ const BAEMIN_CHECKLIST = [
 
   { id:27, section:5, name:'리뷰 답변 작성', badge:'must', badgeLabel:'필수', cycle:'adhoc',
     desc:'답변 없는 리뷰는 무관심으로 읽힙니다 — 100% 답변 목표 (※ 매일 권장)',
-    aiType:'review', aiLabel:'리뷰 답변 AI 생성',
+    aiType:'reply', aiLabel:'리뷰 답변 AI 생성',
     guide:{
       points:[
         {strong:'⭐ 답변의 진짜 청중 = 미주문 잠재 고객 (마케팅 도구)',
@@ -2509,7 +2509,7 @@ const COUPANG_CHECKLIST = [
 
   { id:21, section:4, name:'리뷰 답변 운영 (잠재 고객 신뢰 카드)', badge:'must', badgeLabel:'필수', cycle:'adhoc',
     desc:'답변의 진짜 청중은 작성 고객이 ❌ 매장 상세 리뷰 영역을 훑는 잠재 고객 — 매장 분위기·신뢰도 전달 + 미답변 ❌ + 부정 인지 차단',
-    aiType:'review', aiLabel:'리뷰 답변 AI 생성',
+    aiType:'reply', aiLabel:'리뷰 답변 AI 생성',
     guide:{
       warnTop:{ content:`🎯 답변 = 잠재 고객에게 보여지는 매장 분위기·신뢰 카드
  

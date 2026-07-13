@@ -45,7 +45,7 @@ baemin/{uid}/stores/{storeId}             ← 매장 문서
 
 - **debounce 저장 (App.jsx:142-148)**: 체크 토글 후 `800ms` 뒤 `saveStoreChecklist` 호출. 연타로 인한 Firestore 쓰기 폭주 방지.
 - **빈 객체 마이그레이션 가드 (stores.js:78-84)**: `loadStore`에서 ① 구버전 단일 `checklist` 필드가 있으면 `checklists.baemin`으로 자동 이전, ② `checklists` 자체가 없으면 `{ baemin: {}, coupang: {} }` 기본값 주입. 새 플랫폼 ID(yogiyo·ddanggyo·mukkebi)는 App.jsx의 `checked[p.id] || {}` 패턴이 흡수하므로 마이그레이션 불필요.
-- **AI 캐시 = 버전 히스토리 (stores.js:156-186)**: 매장·`cacheKey`별 최근 10개 보관. 동일 내용 중복 저장 차단. `reply`/`review`는 일회성이라 캐시 안 함.
+- **AI 캐시 = 버전 히스토리 (stores.js:156-186)**: 매장·`cacheKey`별 최근 10개 보관. 동일 내용 중복 저장 차단. `reply`는 일회성이라 캐시 안 함.
 - **localStorage `dgm_platform`**: 마지막으로 본 플랫폼 ID를 클라이언트에만 저장(매장과 독립).
 - **사업자 그룹 4개 권장**: `MAX_STORES_PER_BUSINESS = 4` — 배민 정책 반영. `businessGroupName` 또는 `businessId`로 그룹핑, 둘 다 비면 `__unclassified__` 단일 그룹.
 
@@ -63,7 +63,7 @@ baemin/{uid}/stores/{storeId}             ← 매장 문서
 | `orderguide` | 주문안내 첫 줄         | storeName, firstLine          |
 | `menuoption` | 메뉴 옵션 설계         | 단일 모드/메뉴판 모드 분기     |
 
-(구 카드는 `aiType:'review'`로 작성된 경우가 있으며 `reply`와 동의어로 취급.)
+(리뷰답변 카드의 `aiType` 표기는 `reply`로 통일 — `review` 표기는 사용하지 않는다.)
 
 ## 우리가게클릭 — 최고 재정 리스크 카드
 
@@ -90,7 +90,7 @@ baemin/{uid}/stores/{storeId}             ← 매장 문서
 - **사업자 그룹 (business group)** — `businessGroupName` 또는 `businessId`로 묶인 매장 모음. 권장 4개 이하.
 - **활성 매장 (active store)** — 현재 화면이 보고 있는 매장. `activeStoreId`가 프로필에 저장됨.
 - **AI 캐시 (aiCache)** — 매장·`cacheKey`별 AI 결과 히스토리(최근 10개). 버전 비교·복원용. `reply`는 일회성이라 캐시 안 함.
-- **cacheKey** — AI 결과 식별자. 단일 타입은 `'intro'`, 메뉴별은 `'menuname:불향쭈꾸미덮밥'`처럼 `타입:식별자` 형식.
+- **cacheKey** — AI 결과 식별자. 단일 타입은 `'intro'`, 메뉴별은 `'menuname:불향쭈꾸미덮밥'`처럼 `타입:식별자` 형식. `menuoption`도 메뉴별 분리하되 메뉴판 모드는 `'menuoption:board'` 단일 키.
 - **`prerequisiteCheck`** — 카드 사용 전 사장님이 통과해야 할 자가검증 체크박스 블록. "사용 전 자가검증"으로 부른다. "전제 조건"이나 "선결 체크"로 흘리지 말 것.
 - **배지 (badge)** — 카드 우선순위. `must`(필수) / `high`(권장) / `mid`(참고) / `optional`(선택) / `advanced`(고급 — 자가검증 필수).
 - **주기 (cycle)** — 카드 갱신 주기 권장. `none` / `1m` / `3m` / `6m` / `weekly` / `adhoc`.

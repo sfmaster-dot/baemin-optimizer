@@ -31,22 +31,6 @@ export default async function handler(req, res) {
 
 문구만 출력. 제목·번호·설명 없이.`,
 
-    order: `배달의민족 "주문안내" 문구를 작성합니다.
-
-[입력 정보]
-업종: ${storeInfo.category} / 대표 메뉴: ${storeInfo.mainMenu}
-기본 제공: ${storeInfo.includes || '공기밥, 김치'}
-알레르기 유발 식재료: ${storeInfo.allergy || '없음'}
-맵기 조절 가능: ${storeInfo.spicy || '가능'}
-피크타임 조리 소요 시간: ${storeInfo.peakTime || '20~30분'}
-
-[작성 원칙]
-1. 항목별 글머리 기호(·) 사용
-2. 기본 제공 구성, 맵기 조절, 피크타임 안내, 알레르기 정보 포함
-3. 간결하고 명확하게
-4. 고객이 주문 전에 알아야 할 내용 중심
-
-문구만 출력하세요.`,
 
     orderguide: `배달의민족 "주문안내(가게 알림)" 문구를 작성합니다. 메뉴 영역 위에 첫 줄 미리보기로 노출되고, 가게정보·원산지 탭의 가게 알림 섹션에서 전체가 펼쳐집니다.
 
@@ -986,7 +970,6 @@ STEP 3. 자기검증 (출력 직전)
     menudesc:   400,
     reply:      400,
     intro:      800,
-    order:      600,
     notice:     1000,
     orderguide: 1200,
     menuoption: storeInfo.mode === 'board' ? 5000 : 3000,  // v8: single 1500 → 3000 (객단가 + 신규 제안 영역 추가)
